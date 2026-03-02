@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><meta name="apple-mobile-web-app-title" content="Nexora"/><meta name="theme-color" content="#5B6EF7"/><link rel="manifest" href="/manifest.json"/>
+<title>Dashboard — Nexora Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include '_shell.html' %}
+<style>
+/* Hero */
+.hero{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-xl);padding:28px 28px 22px;margin-bottom:20px;position:relative;overflow:hidden;animation:slideUp .35s ease both;}
+.hero::before{content:'';position:absolute;top:-60px;right:-60px;width:280px;height:280px;background:radial-gradient(circle,rgba(91,110,247,0.15)0%,transparent 70%);border-radius:50%;pointer-events:none;}
+.hero::after{content:'';position:absolute;bottom:-40px;left:25%;width:200px;height:200px;background:radial-gradient(circle,rgba(139,92,246,0.08)0%,transparent 70%);border-radius:50%;pointer-events:none;}
+.hero-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:relative;z-index:1;}
+.greeting{font-size:clamp(20px,3vw,26px);font-weight:800;letter-spacing:-.6px;color:var(--text-primary);}
+.greeting-name{background:linear-gradient(135deg,#818CF8,#A78BFA);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.greeting-sub{font-size:13.5px;color:var(--text-secondary);margin-top:4px;}
+/* Status chips */
+.status-row{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;position:relative;z-index:1;}
+.s-chip{display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:100px;font-size:12px;font-weight:600;color:var(--text-muted);}
+.s-chip.on{color:#22C55E;border-color:rgba(34,197,94,0.2);}
+.s-chip.off{color:#EF4444;border-color:rgba(239,68,68,0.2);}
+.s-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.s-dot.pulse{animation:pdot 1.5s ease-in-out infinite;}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
+.tg-desc{font-size:12px;color:var(--text-secondary);}
+/* Quick Nav */
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.quick-card{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:18px 16px;cursor:pointer;transition:all .2s;text-decoration:none;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;animation:slideUp .35s ease both;}
+.quick-card:hover{border-color:var(--border-strong);transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.25);}
+.quick-card:active{transform:translateY(0);}
+.qc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .2s;}
+.quick-card:hover .qc-icon{transform:scale(1.1);}
+.qc-icon svg{width:18px;height:18px;stroke:white;fill:none;stroke-width:2;}
+.qc-title{font-size:14px;font-weight:700;color:var(--text-primary);}
+.qc-sub{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+.qc-arr{margin-left:auto;flex-shrink:0;color:var(--text-muted);transition:transform .2s,color .2s;}
+.qc-arr svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5;}
+.quick-card:hover .qc-arr{color:var(--primary);transform:translateX(4px);}
+/* Activity */
+.act-row{display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--border-subtle);transition:background .12s;}
+.act-row:last-child{border-bottom:none;}
+.act-row:hover{background:rgba(91,110,247,0.025);}
+.act-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.act-ico svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;}
+.act-msg{flex:1;font-size:13px;color:var(--text-secondary);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.act-time{font-size:11.5px;color:var(--text-muted);flex-shrink:0;}
+@media(max-width:900px){.quick-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.quick-grid{grid-template-columns:1fr;gap:8px;}.hero{padding:20px 18px 18px;}}
+/* Quick Edit Files */
+.quick-edit-card{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-xl);overflow:hidden;margin-bottom:20px;animation:slideUp .35s ease both;}
+.qe-file-row{display:flex;align-items:center;gap:12px;padding:11px 20px;border-bottom:1px solid var(--border-subtle);transition:background .12s;cursor:pointer;}
+.qe-file-row:last-child{border-bottom:none;}
+.qe-file-row:hover{background:rgba(91,110,247,0.025);}
+.qe-file-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+.qe-file-name{flex:1;font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--text-primary);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.qe-file-meta{font-size:11px;color:var(--text-muted);flex-shrink:0;}
+.qe-edit-btn{padding:5px 10px;font-size:11.5px;font-weight:700;border-radius:7px;border:1px solid var(--border-default);background:var(--bg-elevated);color:var(--text-secondary);cursor:pointer;font-family:inherit;transition:all .15s;flex-shrink:0;}
+.qe-edit-btn:hover{background:var(--primary-soft);border-color:var(--primary-border);color:var(--primary);}
+
+</style>
+</head>
+<script>
+(function(){
+  var sid=localStorage.getItem('nsid');
+  if(!sid){window.location.replace('/');return;}
+  document.documentElement.style.visibility='hidden';
+  fetch('/api/auth/me',{headers:{'X-Session-Id':sid}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.success){document.documentElement.style.visibility='';}
+      else{localStorage.removeItem('nsid');window.location.replace('/');}
+    })
+    .catch(function(){document.documentElement.style.visibility='';});
+})();
+</script>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="/dashboard"><div class="sidebar-brand-icon"><svg viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div><div class="sidebar-brand-text">Nexora<span>Cloud</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item active" href="/dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-item" href="/files"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+      <a class="nav-item" href="/bots"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bot Manager</a>
+      <a class="nav-item" href="/editor"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Code Editor</a>
+      <div class="nav-section-label" style="margin-top:8px">Workspace</div>
+      <a class="nav-item" href="/activity"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity Log</a>
+      <a class="nav-item" href="/support"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Support</a>
+      <a class="nav-item" href="/subusers"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Sub-Users</a>
+      <a class="nav-item" href="/settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+      <div id="adminNavItem" style="display:none"><div class="nav-section-label" style="margin-top:8px">Admin</div><a class="nav-item" href="/admin"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Admin Panel</a></div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" onclick="window.location.href='/settings'">
+        <div class="sidebar-avatar" id="sAvatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-name" id="sName">Loading…</div><div class="sidebar-user-role" id="sRole">—</div></div>
+        <button class="sidebar-logout-btn" onclick="event.stopPropagation();doLogout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sOverlay" onclick="closeSidebar()"></div>
+  <div class="topbar" id="topbar">
+    <button class="topbar-menu-btn" onclick="openSidebar()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-brand">Nexora<span>Cloud</span></span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+      <div style="position:relative">
+        <button class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notif-badge" id="notifBadge" style="display:none">0</span></button>
+        <div class="notif-dropdown" id="notifDropdown"><div class="notif-head"><span class="notif-head-title">Notifications</span><button class="notif-mark-all" onclick="markAllRead()">Mark all read</button></div><div class="notif-list" id="notifList"><div class="notif-empty">🔔 No notifications</div></div></div>
+      </div>
+      <div class="topbar-avatar" id="tAvatar" onclick="window.location.href='/settings'">?</div>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="page-inner">
+
+      <!-- HERO -->
+      <div class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="greeting" id="greetingText">Good morning, <span class="greeting-name" id="greetingName">there</span> 👋</div>
+            <div class="greeting-sub">Here's your cloud workspace at a glance</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-grid">
+        <div class="stat-card" style="--stat-color:#5B6EF7;animation-delay:.04s">
+          <div class="stat-icon" style="background:rgba(91,110,247,0.18)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div class="stat-value" id="sTotalFiles">—</div>
+          <div class="stat-label">Total Files</div>
+          <div class="stat-change" id="sFileLimit">—</div>
+        </div>
+        <div class="stat-card" style="--stat-color:#22C55E;animation-delay:.08s">
+          <div class="stat-icon" style="background:rgba(34,197,94,0.16)"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          <div class="stat-value" id="sRunning">—</div>
+          <div class="stat-label">Running Bots</div>
+          <div class="stat-change">Active processes</div>
+        </div>
+        <div class="stat-card" style="--stat-color:#EF4444;animation-delay:.12s">
+          <div class="stat-icon" style="background:rgba(239,68,68,0.16)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+          <div class="stat-value" id="sStopped">—</div>
+          <div class="stat-label">Stopped Bots</div>
+          <div class="stat-change">Idle</div>
+        </div>
+        <div class="stat-card" style="--stat-color:#A78BFA;animation-delay:.16s">
+          <div class="stat-icon" style="background:rgba(167,139,250,0.16)"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-value" id="sSubUsers">—</div>
+          <div class="stat-label">Sub-Users</div>
+          <div class="stat-change">Team members</div>
+        </div>
+      </div>
+
+      <!-- Quick Nav -->
+      <div class="quick-grid">
+        <a class="quick-card" href="/files" style="animation-delay:.05s">
+          <div class="qc-icon" style="background:linear-gradient(135deg,#5B6EF7,#818CF8)"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+          <div><div class="qc-title">File Manager</div><div class="qc-sub">Upload &amp; manage files</div></div>
+          <div class="qc-arr"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+        <a class="quick-card" href="/bots" style="animation-delay:.08s">
+          <div class="qc-icon" style="background:linear-gradient(135deg,#22C55E,#10B981)"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <div><div class="qc-title">Bot Manager</div><div class="qc-sub">Start, stop &amp; monitor</div></div>
+          <div class="qc-arr"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+        <a class="quick-card" href="/editor" style="animation-delay:.11s">
+          <div class="qc-icon" style="background:linear-gradient(135deg,#38BDF8,#5B6EF7)"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+          <div><div class="qc-title">Code Editor</div><div class="qc-sub">Edit scripts in browser</div></div>
+          <div class="qc-arr"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+      </div>
+
+      
+      <!-- Quick Edit — Recent Files -->
+      <div class="quick-edit-card" id="quickEditCard" style="display:none">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" style="background:rgba(56,189,248,0.16)"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+            <div><div class="card-title">Quick Edit</div><div class="card-subtitle">Jump straight into your files</div></div>
+          </div>
+          <a href="/files" class="btn btn-secondary btn-sm">All Files</a>
+        </div>
+        <div id="quickEditList"></div>
+      </div>
+
+<!-- Recent Activity -->
+      <div class="card" style="animation-delay:.14s">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" style="background:rgba(245,158,11,0.18)"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <div><div class="card-title">Recent Activity</div><div class="card-subtitle">Last 3 actions</div></div>
+          </div>
+          <a href="/activity" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        <div id="activityPreview">
+          <div class="empty-state" style="padding:28px 20px">
+            <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <div class="empty-title">No activity yet</div>
+            <div class="empty-subtitle">Your actions will appear here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-stack" id="toastStack"></div>
+<script>
+const SID=()=>localStorage.getItem("nsid")||"";
+const api=(p,o={})=>fetch(p,{headers:{"X-Session-Id":SID(),"Content-Type":"application/json",...(o.headers||{})},...o});
+const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmtDate=iso=>{try{return new Date(iso).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "—";}};
+const AVC=["#5B6EF7","#8B5CF6","#EC4899","#F59E0B","#10B981","#38BDF8","#EF4444","#6366F1","#14B8A6","#F97316"];
+const avc=n=>AVC[(n||"?").charCodeAt(0)%AVC.length];
+function setAvatar(l,c){document.querySelectorAll(".sidebar-avatar,.topbar-avatar").forEach(el=>{el.textContent=l;el.style.background=c;});}
+function openSidebar(){document.getElementById("sidebar").classList.add("open");document.getElementById("sOverlay").classList.add("open");document.body.style.overflow="hidden";}
+function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sOverlay").classList.remove("open");document.body.style.overflow="";}
+
+async function doLogout() {
+  try {
+    // Step 1: Firebase signOut (CRITICAL!)
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const app = initializeApp({apiKey:"AIzaSyATmS9Zy8YIxXf1qYpUB6wIw45i7K-3YVU",authDomain:"hosting-website-bot-v9-v1.firebaseapp.com",projectId:"hosting-website-bot-v9-v1"});
+    const auth = getAuth(app);
+    await signOut(auth);
+    
+    // Step 2: Backend session invalidation
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: {"X-Session-Id": localStorage.getItem("nsid") || ""}
+    }).catch(() => {});
+    
+    // Step 3: Clear all local data
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Step 4: Clear Firebase IndexedDB
+    try {
+      const dbs = await indexedDB.databases();
+      dbs.forEach(db => {
+        if (db.name && db.name.startsWith('firebase')) {
+          indexedDB.deleteDatabase(db.name);
+        }
+      });
+    } catch(e) {}
+    
+    // Step 5: Redirect
+    window.location.replace("/");
+  } catch(err) {
+    console.error('Logout error:', err);
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.replace("/");
+  }
+}
+function setGreeting(name){const h=new Date().getHours();const g=h<12?"Good morning":h<17?"Good afternoon":"Good evening";document.getElementById("greetingText").innerHTML=`${g}, <span class="greeting-name">${esc(name.split(" ")[0])}</span> 👋`;}
+const ACT_ICONS={login:`<svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`,upload:`<svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>`,delete:`<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,start:`<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,stop:`<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,rename:`<svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`,edit:`<svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`};
+const ACT_BG={login:"rgba(91,110,247,0.12)",upload:"rgba(56,189,248,0.12)",delete:"rgba(239,68,68,0.12)",start:"rgba(34,197,94,0.12)",stop:"rgba(245,158,11,0.12)",rename:"rgba(167,139,250,0.12)",edit:"rgba(91,110,247,0.12)"};
+const ACT_C={login:"#818CF8",upload:"#38BDF8",delete:"#EF4444",start:"#22C55E",stop:"#F59E0B",rename:"#A78BFA",edit:"#818CF8"};
+async function loadActivityPreview(){
+  try{const r=await api("/api/activity");const d=await r.json();
+  if(!d.success||!d.activity?.length)return;
+  document.getElementById("activityPreview").innerHTML=d.activity.slice(0,3).map(a=>`<div class="act-row"><div class="act-ico" style="background:${ACT_BG[a.action]||ACT_BG.edit};color:${ACT_C[a.action]||ACT_C.edit}">${ACT_ICONS[a.action]||ACT_ICONS.edit}</div><div class="act-msg">${esc(a.msg||"Unknown action")}</div><div class="act-time">${fmtDate(a.time)}</div></div>`).join("");}catch(e){}}
+// ── bfcache guard ─────────────────────────────────────────────────────────────
+// If Chrome restores this page from bfcache after logout, re-validate session.
+// If session is gone, redirect to login immediately instead of showing stale UI.
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) {
+    if (!localStorage.getItem("nsid")) {
+      window.location.replace("/");
+    } else {
+      init(); // re-validate with server
+    }
+  }
+});
+async function init(){
+  if(!SID()){window.location.href="/";return;}
+  try{const r=await api("/api/auth/me");
+  if(!r.ok){
+    // Check if suspended or banned
+    try{
+      const d=await r.json();
+      if(d.user&&d.user.suspended){showSuspendOverlay(d.user.suspend_reason,d.user.suspend_until);return;}
+      if(d.user&&d.user.banned){showBannedOverlay(d.user.ban_reason);return;}
+    }catch(e2){}
+    window.location.href="/";return;
+  }
+  const d=await r.json();const u=d.user;
+  // Check suspension/ban after login
+  if(u.suspended){showSuspendOverlay(u.suspend_reason,u.suspend_until);return;}
+  if(u.banned){showBannedOverlay(u.ban_reason);return;}
+  const name=u.name||u.email||"User";
+  document.getElementById("sName").textContent=name;document.getElementById("sRole").textContent=u.role;
+  setGreeting(name);const letter=name[0].toUpperCase();const color=avc(name);setAvatar(letter,color);
+  if(["admin","owner"].includes(u.role))document.getElementById("adminNavItem").style.display="block";
+  const fr=await api("/api/files/list");
+  if(fr.ok){const fd=await fr.json();const files=fd.files||[];const run=files.filter(f=>f.status==="active").length;document.getElementById("sTotalFiles").textContent=files.length;document.getElementById("sFileLimit").textContent=`Limit: ${fd.limit}`;document.getElementById("sRunning").textContent=run;document.getElementById("sStopped").textContent=files.length-run;}
+  const sr=await api("/api/subusers/list").catch(()=>null);
+  document.getElementById("sSubUsers").textContent=sr?.ok?(await sr.json()).users?.length||0:0;
+  }catch(e){window.location.href="/";}
+  loadQuickEdit();loadActivityPreview();loadNotifications();
+}
+
+const EXT_CLR={py:"rgba(56,189,248,.14)",js:"rgba(251,191,36,.12)",ts:"rgba(251,191,36,.12)",sh:"rgba(167,139,250,.12)"};
+const EXT_TC={py:"#38BDF8",js:"#FBBF24",ts:"#FBBF24",sh:"#A78BFA"};
+async function loadQuickEdit(){
+  try{
+    const r=await api("/api/files/list");const d=await r.json();
+    const files=(d.files||[]).filter(f=>f.editable).slice(0,5);
+    if(!files.length)return;
+    const card=document.getElementById("quickEditCard");
+    const list=document.getElementById("quickEditList");
+    if(!card||!list)return;
+    card.style.display="block";
+    const RUNNABLE=["py","js","ts","sh","bash"];
+    list.innerHTML=files.map(f=>{
+      const ext=(f.type||"txt").toLowerCase();
+      const bg=EXT_CLR[ext]||"rgba(91,110,247,.12)";
+      const tc=EXT_TC[ext]||"#818CF8";
+      const isRun=RUNNABLE.includes(ext)&&f.status==="active";
+      return `<div class="qe-file-row" onclick="window.location.href='/editor?id=${f.id}&file=${encodeURIComponent(f.name)}&from=dash'">
+        <div class="qe-file-icon" style="background:${bg};color:${tc}">${ext.toUpperCase()}</div>
+        <div class="qe-file-name" title="${f.name}">${f.name}</div>
+        ${isRun?'<span style="width:7px;height:7px;border-radius:50%;background:#10B981;flex-shrink:0;display:inline-block"></span>':""}
+        <div class="qe-file-meta">${f.size||""}</div>
+        <button class="qe-edit-btn" onclick="event.stopPropagation();window.location.href='/editor?id=${f.id}&file=${encodeURIComponent(f.name)}&from=dash'">
+          <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;margin-right:4px"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Edit
+        </button>
+      </div>`;
+    }).join("");
+  }catch(e){}
+}
+init();
+</script>
+<div id="suspendOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#0A0B14;align-items:center;justify-content:center;padding:24px">
+  <div style="max-width:480px;width:100%;text-align:center">
+    <div style="width:72px;height:72px;background:rgba(245,158,11,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;border:2px solid rgba(245,158,11,0.4)">
+      <svg viewBox="0 0 24 24" style="width:32px;height:32px;stroke:#F59E0B;fill:none;stroke-width:2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div style="font-size:26px;font-weight:800;color:#F59E0B;margin-bottom:8px">Account Suspended</div>
+    <div style="font-size:14px;color:#8891B8;margin-bottom:20px">Your Nexora Cloud account has been temporarily suspended.</div>
+    <div id="suspendReasonBox" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:16px 18px;font-size:14px;color:#E2E4F0;text-align:left;margin-bottom:16px"></div>
+    <!-- Live countdown timer -->
+    <div id="suspendCountdownWrap" style="display:none;margin-bottom:20px">
+      <div style="font-size:11px;color:#8891B8;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Time Remaining</div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:10px 14px;min-width:58px">
+          <div id="cd_months" style="font-size:22px;font-weight:800;color:#F59E0B">0</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Months</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:10px 14px;min-width:58px">
+          <div id="cd_days" style="font-size:22px;font-weight:800;color:#F59E0B">0</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Days</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:10px 14px;min-width:58px">
+          <div id="cd_hours" style="font-size:22px;font-weight:800;color:#F59E0B">0</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Hours</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:10px 14px;min-width:58px">
+          <div id="cd_mins" style="font-size:22px;font-weight:800;color:#F59E0B">0</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Mins</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:10px 14px;min-width:58px">
+          <div id="cd_secs" style="font-size:22px;font-weight:800;color:#F59E0B">0</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Secs</div>
+        </div>
+      </div>
+    </div>
+    <div id="suspendUntilBox" style="font-size:12px;color:#8891B8;margin-bottom:20px"></div>
+    <div id="suspendSupportBtns" style="display:flex;flex-direction:column;gap:10px">
+      <!-- Support button injected dynamically based on support_enabled -->
+    </div>
+    <div style="margin-top:8px">
+      <button onclick="doLogout()" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#8891B8;padding:10px;border-radius:10px;font-family:inherit;cursor:pointer;font-size:14px;width:100%">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Banned Overlay -->
+<div id="bannedOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#0A0B14;align-items:center;justify-content:center;padding:24px">
+  <div style="max-width:480px;width:100%;text-align:center">
+    <div style="width:72px;height:72px;background:rgba(239,68,68,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;border:2px solid rgba(239,68,68,0.4)">
+      <svg viewBox="0 0 24 24" style="width:32px;height:32px;stroke:#EF4444;fill:none;stroke-width:2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    </div>
+    <div style="font-size:26px;font-weight:800;color:#EF4444;margin-bottom:8px">Account Banned</div>
+    <div style="font-size:14px;color:#8891B8;margin-bottom:20px">Your Nexora Cloud account has been banned.</div>
+    <div id="banReasonBox" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:16px 18px;font-size:14px;color:#E2E4F0;text-align:left;margin-bottom:24px"></div>
+    <div id="bannedSupportBtns" style="display:flex;flex-direction:column;gap:10px">
+      <!-- Support button injected dynamically -->
+    </div>
+    <div style="margin-top:8px">
+      <button onclick="doLogout()" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#8891B8;padding:10px;border-radius:10px;font-family:inherit;cursor:pointer;font-size:14px;width:100%">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _cdInterval=null;
+
+function _startCountdown(untilIso){
+  if(_cdInterval){clearInterval(_cdInterval);_cdInterval=null;}
+  const untilMs=new Date(untilIso).getTime();
+  function tick(){
+    const now=Date.now();
+    let diffSec=Math.max(0,Math.floor((untilMs-now)/1000));
+    // Calculate months (approximate: 30 days per month)
+    const months=Math.floor(diffSec/2592000);diffSec-=months*2592000;
+    const days=Math.floor(diffSec/86400);diffSec-=days*86400;
+    const hours=Math.floor(diffSec/3600);diffSec-=hours*3600;
+    const mins=Math.floor(diffSec/60);
+    const secs=diffSec-mins*60;
+    const m=document.getElementById("cd_months");
+    const dy=document.getElementById("cd_days");
+    const h=document.getElementById("cd_hours");
+    const mn=document.getElementById("cd_mins");
+    const s=document.getElementById("cd_secs");
+    if(m)m.textContent=String(months).padStart(2,"0");
+    if(dy)dy.textContent=String(days).padStart(2,"0");
+    if(h)h.textContent=String(hours).padStart(2,"0");
+    if(mn)mn.textContent=String(mins).padStart(2,"0");
+    if(s)s.textContent=String(secs).padStart(2,"0");
+    // If expired, clear and reload
+    if(months===0&&days===0&&hours===0&&mins===0&&secs===0){
+      clearInterval(_cdInterval);_cdInterval=null;
+      // Suspension time has passed — show message instead of looping
+      const cw=document.getElementById("suspendCountdownWrap");
+      const ub=document.getElementById("suspendUntilBox");
+      if(cw)cw.style.display="none";
+      if(ub){ub.textContent="⏳ Suspension period has ended. Please sign out and sign back in.";ub.style.color="#22C55E";}
+      return;
+    }
+  }
+  tick(); // run immediately
+  _cdInterval=setInterval(tick,1000); // then every second
+}
+
+async function _injectSupportBtns(suspendBtnContainerId, supportBtnHtml){
+  try{
+    const r=await fetch("/api/public/support_status");
+    const d=await r.json();
+    const container=document.getElementById(suspendBtnContainerId);
+    if(!container)return;
+    if(d.support_enabled){
+      container.innerHTML=supportBtnHtml;
+    }else{
+      container.innerHTML='<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 16px;font-size:13px;color:#8891B8">Support is currently unavailable. Please try again later.</div>';
+    }
+  }catch(e){/* silently ignore */}
+}
+
+function showSuspendOverlay(reason,until){
+  const el=document.getElementById("suspendOverlay");
+  if(_cdInterval){clearInterval(_cdInterval);_cdInterval=null;}
+  if(el){
+    el.style.display="flex";
+    const rb=document.getElementById("suspendReasonBox");
+    if(rb)rb.innerHTML='<b>Reason:</b> '+(reason||"No reason provided");
+    const ub=document.getElementById("suspendUntilBox");
+    const cw=document.getElementById("suspendCountdownWrap");
+    if(until){
+      try{
+        const untilMs=new Date(until).getTime();
+        if(untilMs<=Date.now()){
+          if(cw)cw.style.display="none";
+          if(ub){ub.textContent="✅ Suspension period has ended. Please sign out and sign back in.";ub.style.color="#22C55E";ub.style.fontSize="14px";}
+        }else{
+          if(cw)cw.style.display="block";
+          _startCountdown(until);
+          const d=new Date(until);
+          if(ub)ub.textContent="Suspended until: "+d.toLocaleString();
+        }
+      }catch(e){if(ub)ub.textContent="";}
+    }else{
+      if(cw)cw.style.display="none";
+      if(ub)ub.textContent="This suspension is permanent until reviewed by an admin.";
+    }
+    _injectSupportBtns("suspendSupportBtns",'<a href="/support" class="btn btn-primary" style="display:block;text-decoration:none">Create Support Ticket</a>');
+  }
+}
+function showBannedOverlay(reason){
+  const el=document.getElementById("bannedOverlay");
+  if(el){
+    el.style.display="flex";
+    const rb=document.getElementById("banReasonBox");
+    if(rb)rb.innerHTML='<b>Reason:</b> '+(reason||"No reason provided");
+    _injectSupportBtns("bannedSupportBtns",'<a href="/support" class="btn btn-primary" style="display:block;text-decoration:none">Create Support Ticket</a>');
+  }
+}
+</script>
+</body>
+</html>

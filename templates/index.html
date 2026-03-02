@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Nexora"/>
+<meta name="theme-color" content="#5B6EF7"/>
+<link rel="manifest" href="/manifest.json"/>
+<title>Sign In — Nexora Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:'Inter',sans-serif;background:#0A0B14;color:#E2E4F0;-webkit-font-smoothing:antialiased;}
+body{display:flex;min-height:100vh;}
+.split{display:flex;width:100%;min-height:100vh;}
+
+/* ANIMATED BACKGROUND */
+@keyframes gradientShift {
+  0%,100%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+}
+@keyframes float {
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  50%{transform:translateY(-20px) rotate(5deg)}
+}
+@keyframes pulse-glow {
+  0%,100%{opacity:0.4;transform:scale(1)}
+  50%{opacity:0.7;transform:scale(1.05)}
+}
+@keyframes slideInLeft {
+  from{opacity:0;transform:translateX(-30px)}
+  to{opacity:1;transform:translateX(0)}
+}
+@keyframes slideInUp {
+  from{opacity:0;transform:translateY(30px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes fadeIn {
+  from{opacity:0}
+  to{opacity:1}
+}
+@keyframes shimmer {
+  0%{background-position:-200% 0}
+  100%{background-position:200% 0}
+}
+
+/* LEFT PANEL (Desktop) */
+.left{
+  display:none;flex:1;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#0C0D1F 0%,#0A0B14 50%,#0D0E1A 100%);
+  border-right:1px solid rgba(255,255,255,0.06);
+}
+@media(min-width:860px){.left{display:flex;flex-direction:column;justify-content:center;padding:60px 52px;}}
+
+/* Animated background elements */
+.lbg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbg-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(91,110,247,0.03)1px,transparent 1px),
+    linear-gradient(90deg,rgba(91,110,247,0.03)1px,transparent 1px);
+  background-size:60px 60px;
+  animation:shimmer 20s linear infinite;
+}
+.lbg-orb1{
+  position:absolute;width:600px;height:600px;top:-200px;left:-200px;
+  background:radial-gradient(circle,rgba(91,110,247,0.25)0%,transparent 70%);
+  border-radius:50%;filter:blur(100px);
+  animation:pulse-glow 8s ease-in-out infinite;
+}
+.lbg-orb2{
+  position:absolute;width:500px;height:500px;bottom:-150px;right:-100px;
+  background:radial-gradient(circle,rgba(139,92,246,0.2)0%,transparent 70%);
+  border-radius:50%;filter:blur(80px);
+  animation:pulse-glow 10s ease-in-out infinite 2s;
+}
+.lbg-orb3{
+  position:absolute;width:300px;height:300px;top:40%;left:30%;
+  background:radial-gradient(circle,rgba(56,189,248,0.1)0%,transparent 70%);
+  border-radius:50%;filter:blur(60px);
+  animation:float 15s ease-in-out infinite;
+}
+
+.l-content{position:relative;z-index:1;animation:fadeIn 0.8s ease-out}
+.l-brand{
+  display:flex;align-items:center;gap:14px;margin-bottom:70px;
+  animation:slideInLeft 0.6s ease-out;
+}
+.l-brand-ico{
+  width:52px;height:52px;
+  background:linear-gradient(135deg,#5B6EF7 0%,#8B5CF6 100%);
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 10px 40px rgba(91,110,247,0.5),0 0 0 1px rgba(255,255,255,0.1) inset;
+  position:relative;overflow:hidden;
+}
+.l-brand-ico::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent 0%,rgba(255,255,255,0.2) 100%);
+}
+.l-brand-ico svg{width:26px;height:26px;fill:white;position:relative;z-index:1}
+.l-brand-txt{font-size:24px;font-weight:800;letter-spacing:-0.5px;color:#E8EAFF}
+.l-brand-txt span{color:#818CF8}
+
+.l-headline{
+  font-size:clamp(38px,4.5vw,52px);font-weight:900;letter-spacing:-2px;
+  line-height:1.08;margin-bottom:22px;color:#E8EAFF;
+  animation:slideInLeft 0.6s ease-out 0.1s both;
+}
+.l-headline span{
+  background:linear-gradient(135deg,#818CF8 0%,#A78BFA 50%,#C4B5FD 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.l-sub{
+  font-size:17px;color:#8891B8;line-height:1.8;margin-bottom:60px;max-width:420px;
+  animation:slideInLeft 0.6s ease-out 0.2s both;
+}
+
+.features{display:flex;flex-direction:column;gap:18px;}
+.feat{
+  display:flex;align-items:center;gap:16px;
+  padding:14px 16px;background:rgba(255,255,255,0.02);
+  border:1px solid rgba(255,255,255,0.04);border-radius:14px;
+  transition:all 0.3s ease;
+  animation:slideInLeft 0.6s ease-out both;
+}
+.feat:nth-child(1){animation-delay:0.3s}
+.feat:nth-child(2){animation-delay:0.4s}
+.feat:nth-child(3){animation-delay:0.5s}
+.feat:nth-child(4){animation-delay:0.6s}
+.feat:hover{
+  background:rgba(255,255,255,0.04);
+  border-color:rgba(91,110,247,0.2);
+  transform:translateX(8px);
+}
+.feat-ico{
+  width:46px;height:46px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 4px 15px rgba(0,0,0,0.3);
+}
+.feat-ico svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2}
+.feat-name{font-size:15px;font-weight:700;color:#E8EAFF}
+.feat-desc{font-size:13px;color:#8891B8;margin-top:3px}
+
+/* RIGHT PANEL */
+.right{
+  width:100%;display:flex;align-items:center;justify-content:center;
+  padding:24px;position:relative;background:#0A0B14;
+  background:linear-gradient(180deg,#0A0B14 0%,#0C0D18 100%);
+}
+@media(min-width:860px){.right{width:480px;flex-shrink:0;}}
+
+.rbg-orb{
+  position:absolute;width:400px;height:400px;top:-120px;right:-120px;
+  background:radial-gradient(circle,rgba(91,110,247,0.12)0%,transparent 70%);
+  border-radius:50%;filter:blur(80px);pointer-events:none;
+  animation:pulse-glow 12s ease-in-out infinite;
+}
+.rbg-orb2{
+  position:absolute;width:300px;height:300px;bottom:-80px;left:-80px;
+  background:radial-gradient(circle,rgba(139,92,246,0.08)0%,transparent 70%);
+  border-radius:50%;filter:blur(60px);pointer-events:none;
+  animation:pulse-glow 10s ease-in-out infinite 3s;
+}
+
+.login-wrap{
+  width:100%;max-width:420px;position:relative;z-index:1;
+  animation:slideInUp 0.7s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.login-card{
+  background:rgba(15,16,32,0.8);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:28px;padding:44px 40px;
+  box-shadow:0 32px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(91,110,247,0.05) inset;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  position:relative;overflow:hidden;
+}
+.login-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
+}
+
+/* Mobile brand */
+.mob-brand{
+  display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:36px;
+}
+.mob-brand-ico{
+  width:44px;height:44px;
+  background:linear-gradient(135deg,#5B6EF7,#8B5CF6);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 22px rgba(91,110,247,0.45);
+}
+.mob-brand-ico svg{width:24px;height:24px;fill:white}
+.mob-brand-txt{font-size:22px;font-weight:800;letter-spacing:-0.4px}
+.mob-brand-txt span{color:#818CF8}
+@media(min-width:860px){.mob-brand{display:none}}
+
+.login-title{
+  font-size:30px;font-weight:800;letter-spacing:-0.8px;
+  text-align:center;margin-bottom:8px;color:#E8EAFF;
+}
+.login-sub{
+  font-size:15px;color:#8891B8;text-align:center;line-height:1.6;margin-bottom:30px;
+}
+
+/* Feature Pills */
+.pills{
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:32px;
+}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;background:rgba(20,22,40,0.8);
+  border:1px solid rgba(255,255,255,0.06);border-radius:100px;
+  font-size:12px;font-weight:600;color:#8891B8;
+  transition:all 0.2s ease;
+}
+.pill:hover{
+  background:rgba(91,110,247,0.1);
+  border-color:rgba(91,110,247,0.25);
+  color:#818CF8;transform:translateY(-1px);
+}
+.pill svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5}
+
+/* Google Button */
+.btn-google{
+  display:flex;align-items:center;justify-content:center;gap:12px;width:100%;
+  padding:16px;background:linear-gradient(180deg,#fff 0%,#f8f9ff 100%);
+  color:#1a1a2e;border:none;border-radius:14px;
+  font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  transition:all 0.25s ease;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4),0 0 0 1px rgba(0,0,0,0.05) inset;
+  min-height:56px;position:relative;overflow:hidden;
+}
+.btn-google::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.02) 100%);
+  pointer-events:none;
+}
+.btn-google:hover:not(:disabled){
+  transform:translateY(-2px);
+  box-shadow:0 8px 30px rgba(0,0,0,0.5),0 0 0 1px rgba(0,0,0,0.05) inset;
+}
+.btn-google:active{transform:translateY(0)}
+.btn-google:disabled{opacity:0.5;cursor:not-allowed}
+.btn-google.loading span{opacity:0}
+.btn-google.loading::after{
+  content:'';position:absolute;width:20px;height:20px;
+  border:2.5px solid rgba(0,0,0,0.1);border-top-color:#1a1a2e;border-radius:50%;
+  animation:spin 0.7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gico{width:22px;height:22px;flex-shrink:0}
+
+/* Security Note */
+.sec-note{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;margin-top:20px;
+  background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);
+  border-radius:12px;font-size:13px;color:#8891B8;
+  transition:all 0.2s ease;
+}
+.sec-note:hover{
+  background:rgba(34,197,94,0.08);
+  border-color:rgba(34,197,94,0.2);
+}
+.sec-note svg{width:16px;height:16px;stroke:#22C55E;fill:none;stroke-width:2;flex-shrink:0}
+
+/* Error Box */
+.err{
+  display:none;background:rgba(239,68,68,0.08);
+  border:1px solid rgba(239,68,68,0.2);border-radius:12px;
+  padding:14px 18px;font-size:13.5px;color:#EF4444;margin-top:16px;
+  animation:errIn 0.25s ease;
+}
+@keyframes errIn{from{opacity:0;transform:translateY(-6px)}}
+.err.show{display:block}
+
+/* Footer */
+.footer{
+  text-align:center;margin-top:24px;font-size:12.5px;color:#535A82;
+}
+.footer a{
+  color:#5B6EF7;text-decoration:none;font-weight:600;
+  transition:all 0.2s ease;position:relative;
+}
+.footer a::after{
+  content:'';position:absolute;bottom:-2px;left:0;width:0;height:1px;
+  background:#5B6EF7;transition:width 0.2s ease;
+}
+.footer a:hover::after{width:100%}
+.footer a:hover{color:#818CF8}
+
+/* Divider */
+.divider{
+  display:flex;align-items:center;gap:16px;margin:28px 0;
+  color:#535A82;font-size:13px;
+}
+.divider::before,.divider::after{
+  content:'';flex:1;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
+}
+
+/* Loading State */
+.loading-dots{
+  display:flex;gap:6px;justify-content:center;padding:20px;
+}
+.loading-dots span{
+  width:8px;height:8px;background:#5B6EF7;border-radius:50%;
+  animation:dotBounce 1.4s ease-in-out infinite both;
+}
+.loading-dots span:nth-child(1){animation-delay:-0.32s}
+.loading-dots span:nth-child(2){animation-delay:-0.16s}
+@keyframes dotBounce{
+  0%,80%,100%{transform:scale(0)}
+  40%{transform:scale(1)}
+}
+</style>
+<base target="_blank">
+<base target="_blank">
+</head>
+<body>
+<div class="split">
+  <!-- LEFT PANEL -->
+  <div class="left">
+    <div class="lbg">
+      <div class="lbg-grid"></div>
+      <div class="lbg-orb1"></div>
+      <div class="lbg-orb2"></div>
+      <div class="lbg-orb3"></div>
+    </div>
+    <div class="l-content">
+      <div class="l-brand">
+        <div class="l-brand-ico"><svg viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div>
+        <div class="l-brand-txt">Nexora<span>Cloud</span></div>
+      </div>
+      <div class="l-headline">Host bots.<br>Manage files.<br><span>Ship faster.</span></div>
+      <div class="l-sub">The all-in-one cloud platform for Python bots and scripts — with real-time logs, Telegram integration, and team collaboration.</div>
+      <div class="features">
+        <div class="feat">
+          <div class="feat-ico" style="background:linear-gradient(135deg,rgba(91,110,247,0.2),rgba(91,110,247,0.1))"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <div><div class="feat-name">Automated Bot Hosting</div><div class="feat-desc">Start, stop & monitor bots 24/7 from anywhere</div></div>
+        </div>
+        <div class="feat">
+          <div class="feat-ico" style="background:linear-gradient(135deg,rgba(34,197,94,0.18),rgba(34,197,94,0.08))"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+          <div><div class="feat-name">Smart File Manager</div><div class="feat-desc">Upload, edit & deploy files in seconds</div></div>
+        </div>
+        <div class="feat">
+          <div class="feat-ico" style="background:linear-gradient(135deg,rgba(56,189,248,0.18),rgba(56,189,248,0.08))"><svg viewBox="0 0 24 24"><path d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-8.609 3.33c-2.068.8-4.133 1.598-5.724 2.21-.42.147-.99.332-1.473.901-.728.9-.658 2.055.154 2.747.33.27.698.454 1.023.6a76.58 76.58 0 0 0 1.938.7l2.396.842.858 2.394c.18.5.44.995.89 1.301.29.197.625.294.983.294.43 0 .862-.138 1.19-.413l2.355-2.018 1.665 1.393c.427.357.98.517 1.545.491a2.24 2.24 0 0 0 .673-1.44l1.253-12.553.03-.295c.06-.59.01-1.22-.34-1.745-.349-.524-.921-.878-1.609-.963z" fill="#26A5E4"/></svg></div>
+          <div><div class="feat-name">Telegram Integration</div><div class="feat-desc">Control everything via Telegram commands</div></div>
+        </div>
+        <div class="feat">
+          <div class="feat-ico" style="background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(167,139,250,0.08))"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div><div class="feat-name">Team Collaboration</div><div class="feat-desc">Invite sub-users with granular permissions</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right">
+    <div class="rbg-orb"></div>
+    <div class="rbg-orb2"></div>
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="mob-brand">
+          <div class="mob-brand-ico"><svg viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div>
+          <div class="mob-brand-txt">Nexora<span>Cloud</span></div>
+        </div>
+        <div class="login-title">Welcome back</div>
+        <div class="login-sub">Sign in to your cloud workspace</div>
+        <div class="pills">
+          <span class="pill"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Auto-Run</span>
+          <span class="pill"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Live Logs</span>
+          <span class="pill"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Secure</span>
+          <span class="pill"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Teams</span>
+        </div>
+        <button class="btn-google" id="gBtn" onclick="doGoogleAuth()">
+          <svg class="gico" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          <span>Continue with Google</span>
+        </button>
+        <div class="err" id="errBox"></div>
+        <div class="sec-note">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Secured by Google OAuth — we never store your password
+        </div>
+        <div class="footer">By continuing, you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+const app = initializeApp({apiKey:"AIzaSyATmS9Zy8YIxXf1qYpUB6wIw45i7K-3YVU",authDomain:"hosting-website-bot-v9-v1.firebaseapp.com",projectId:"hosting-website-bot-v9-v1",storageBucket:"hosting-website-bot-v9-v1.firebasestorage.app",messagingSenderId:"30851887524",appId:"1:30851887524:web:f643dd4df3088a9bef5131",databaseURL:"https://hosting-website-bot-v9-v1-default-rtdb.firebaseio.com"});
+const auth = getAuth(app);
+
+// ══════════════════════════════════════════════════════════════════
+// PROPER LOGOUT FUNCTION WITH FIREBASE SIGNOUT
+// ══════════════════════════════════════════════════════════════════
+window.doLogout = async function() {
+  try {
+    // Step 1: Firebase signOut (CRITICAL - clears Firebase auth state)
+    await signOut(auth);
+    
+    // Step 2: Backend session invalidation
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: {"X-Session-Id": localStorage.getItem("nsid") || ""}
+    }).catch(() => {});
+    
+    // Step 3: Clear all local data
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Step 4: Clear Firebase IndexedDB (prevents stale OAuth state)
+    try {
+      const dbs = await indexedDB.databases();
+      dbs.forEach(db => {
+        if (db.name && db.name.startsWith('firebase')) {
+          indexedDB.deleteDatabase(db.name);
+        }
+      });
+    } catch(e) { console.log('IndexedDB clear failed:', e); }
+    
+    // Step 5: Redirect to login
+    window.location.replace("/");
+  } catch(err) {
+    console.error('Logout error:', err);
+    // Even if Firebase signOut fails, clear everything and redirect
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.replace("/");
+  }
+};
+const _card = document.querySelector('.login-card');
+if(localStorage.getItem("nsid")){
+  if(_card) _card.style.opacity="0";
+  fetch("/api/auth/me",{headers:{"X-Session-Id":localStorage.getItem("nsid")}})
+    .then(async r=>{
+      if(r.ok){const d=await r.json();if(d.success){window.location.replace("/dashboard");return;}}
+      if(_card){_card.style.transition="opacity .4s";_card.style.opacity="1";}
+      localStorage.removeItem("nsid");localStorage.removeItem("nx_user");
+    }).catch(()=>{if(_card){_card.style.transition="opacity .4s";_card.style.opacity="1";}});
+} else {if(_card){_card.style.transition="opacity .4s";setTimeout(()=>{_card.style.opacity="1";},20);}}
+window.doGoogleAuth = async () => {
+  const btn=document.getElementById("gBtn");const err=document.getElementById("errBox");
+  btn.classList.add("loading");btn.disabled=true;err.classList.remove("show");
+  try {
+    const res=await signInWithPopup(auth,new GoogleAuthProvider());
+    const email=res.user.email||"";
+    const tok=await res.user.getIdToken();
+    const cc=await fetch("/api/auth/check-cooldown",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
+    const cd=await cc.json();
+    if(cd.blocked){
+      const h=cd.hours_left||0;
+      const days=h>=24?Math.ceil(h/24)+' days':h+' hour(s)';
+      showErr(`This email cannot register a new account for another ${days}. Reason: ${cd.reason||'Account was deleted.'}`);
+      return;
+    }
+    const r=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id_token:tok})});
+    let d;try{d=await r.json();}catch(_){throw new Error("Server error ("+r.status+"). Try again.");}
+    if(d.success){
+      localStorage.setItem("nsid",d.session_id);
+      localStorage.setItem("nx_user",JSON.stringify(d.user));
+      const nx=new URLSearchParams(location.search).get("next");
+      window.location.href=nx||"/dashboard";
+    } else if(d.suspended){
+      showSuspendScreen(d.suspend_reason,d.suspend_until);
+    } else showErr(d.error||"Sign-in failed");
+  }catch(e){if(e.code!=="auth/popup-closed-by-user")showErr(e.message||"Authentication error");}
+  finally{btn.classList.remove("loading");btn.disabled=false;}
+};
+function showErr(m){const e=document.getElementById("errBox");e.textContent=m;e.classList.add("show");}
+</script>
+
+<!-- Suspend Screen -->
+<div id="loginSuspendScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:#0A0B14;align-items:center;justify-content:center;padding:24px;font-family:'Inter',sans-serif">
+  <div style="max-width:480px;width:100%;text-align:center">
+    <div style="width:80px;height:80px;background:rgba(245,158,11,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;border:2px solid rgba(245,158,11,0.4);animation:pulse-glow 2s ease-in-out infinite">
+      <svg viewBox="0 0 24 24" style="width:36px;height:36px;stroke:#F59E0B;fill:none;stroke-width:2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div style="font-size:28px;font-weight:800;color:#F59E0B;margin-bottom:10px">Account Suspended</div>
+    <div style="font-size:15px;color:#8891B8;margin-bottom:24px">Your account has been temporarily suspended.</div>
+    <div id="ls_reasonBox" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:14px;padding:18px 20px;font-size:14px;color:#E2E4F0;text-align:left;margin-bottom:18px"></div>
+    <div id="ls_countdownWrap" style="display:none;margin-bottom:18px">
+      <div style="font-size:11px;color:#8891B8;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Time Remaining</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:12px 14px;min-width:60px">
+          <div id="lsc_months" style="font-size:22px;font-weight:800;color:#F59E0B">00</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Months</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:12px 14px;min-width:60px">
+          <div id="lsc_days" style="font-size:22px;font-weight:800;color:#F59E0B">00</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Days</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:12px 14px;min-width:60px">
+          <div id="lsc_hours" style="font-size:22px;font-weight:800;color:#F59E0B">00</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Hours</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:12px 14px;min-width:60px">
+          <div id="lsc_mins" style="font-size:22px;font-weight:800;color:#F59E0B">00</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Mins</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:12px 14px;min-width:60px">
+          <div id="lsc_secs" style="font-size:22px;font-weight:800;color:#F59E0B">00</div>
+          <div style="font-size:10px;color:#8891B8;margin-top:2px">Secs</div>
+        </div>
+      </div>
+    </div>
+    <div id="ls_untilBox" style="font-size:13px;color:#8891B8;margin-bottom:24px"></div>
+    <div id="ls_supportBtns" style="margin-bottom:14px"></div>
+    <button onclick="document.getElementById('loginSuspendScreen').style.display='none'" 
+      style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#8891B8;padding:12px 24px;border-radius:12px;font-family:inherit;cursor:pointer;font-size:14px;width:100%;transition:all 0.2s ease">Back to Login</button>
+  </div>
+</div>
+
+<script>
+var _lscInterval=null;
+function showSuspendScreen(reason,until){
+  var sc=document.getElementById("loginSuspendScreen");
+  sc.style.display="flex";
+  var rb=document.getElementById("ls_reasonBox");
+  if(rb)rb.innerHTML="<b>Reason:</b> "+(reason||"No reason provided");
+  var ub=document.getElementById("ls_untilBox");
+  var cw=document.getElementById("ls_countdownWrap");
+  if(_lscInterval){clearInterval(_lscInterval);_lscInterval=null;}
+  if(until){
+    try{
+      var untilMs=new Date(until).getTime();
+      if(untilMs<=Date.now()){
+        if(cw)cw.style.display="none";
+        if(ub){ub.textContent="Suspension period has ended. Please sign in again.";ub.style.color="#22C55E";ub.style.fontSize="14px";}
+      }else{
+        if(cw)cw.style.display="block";
+        function tick(){
+          var now=Date.now();
+          var diff=Math.max(0,Math.floor((untilMs-now)/1000));
+          var mo=Math.floor(diff/2592000);diff-=mo*2592000;
+          var dy=Math.floor(diff/86400);diff-=dy*86400;
+          var hr=Math.floor(diff/3600);diff-=hr*3600;
+          var mn=Math.floor(diff/60);
+          var sc2=diff-mn*60;
+          var pad=function(n){return String(n).padStart(2,"0");};
+          document.getElementById("lsc_months").textContent=pad(mo);
+          document.getElementById("lsc_days").textContent=pad(dy);
+          document.getElementById("lsc_hours").textContent=pad(hr);
+          document.getElementById("lsc_mins").textContent=pad(mn);
+          document.getElementById("lsc_secs").textContent=pad(sc2);
+          if(mo===0&&dy===0&&hr===0&&mn===0&&sc2===0){
+            clearInterval(_lscInterval);_lscInterval=null;
+            if(cw)cw.style.display="none";
+            if(ub){ub.textContent="Suspension period has ended. Please sign in again.";ub.style.color="#22C55E";}
+          }
+        }
+        tick();
+        _lscInterval=setInterval(tick,1000);
+        var d=new Date(until);
+        if(ub)ub.textContent="Suspended until: "+d.toLocaleString();
+      }
+    }catch(e){if(ub)ub.textContent="";}
+  } else {
+    if(cw)cw.style.display="none";
+    if(ub)ub.textContent="This suspension is permanent until reviewed.";
+  }
+  fetch("/api/public/support_status").then(function(r){return r.json();}).then(function(d){
+    var btn=document.getElementById("ls_supportBtns");
+    if(btn){
+      if(d.support_enabled){
+        btn.innerHTML='<a href="/support" style="display:block;background:linear-gradient(135deg,#5B6EF7,#8B5CF6);color:white;padding:14px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;box-shadow:0 4px 20px rgba(91,110,247,0.4);transition:all 0.2s ease">Create Support Ticket</a>';
+      } else {
+        btn.innerHTML='<div style="font-size:13px;color:#8891B8;padding:12px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">Support is currently unavailable.</div>';
+      }
+    }
+  }).catch(function(){});
+}
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('/sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>

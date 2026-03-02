@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><meta name="apple-mobile-web-app-title" content="Nexora"/><meta name="theme-color" content="#5B6EF7"/><link rel="manifest" href="/manifest.json"/>
+<title>Sub-Users — Nexora Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+{% include '_shell.html' %}
+<style>
+.su-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:12px;}
+.su-title{font-size:22px;font-weight:800;color:var(--text-primary);letter-spacing:-.4px;}
+.su-sub{font-size:13px;color:var(--text-secondary);margin-top:3px;}
+
+/* Main Tabs */
+.main-tabs{display:flex;gap:0;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:3px;margin-bottom:20px;}
+.main-tab{flex:1;padding:9px 16px;border-radius:6px;font-size:13.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:all .18s;text-align:center;border:none;background:none;font-family:inherit;}
+.main-tab.active{background:var(--bg-surface);color:var(--text-primary);box-shadow:0 1px 5px rgba(0,0,0,.15);}
+
+/* Sub Tabs */
+.sub-tabs{display:flex;gap:0;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:3px;margin-bottom:18px;width:fit-content;}
+.sub-tab{padding:6px 16px;border-radius:6px;font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:all .18s;border:none;background:none;font-family:inherit;display:flex;align-items:center;gap:6px;}
+.sub-tab.active{background:var(--bg-surface);color:var(--text-primary);box-shadow:0 1px 4px rgba(0,0,0,.12);}
+.sub-badge{background:var(--primary);color:white;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:100px;display:flex;align-items:center;justify-content:center;padding:0 4px;}
+
+/* Invite Banner */
+.invite-banner{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius-md);padding:16px;display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;animation:slideUp .3s ease both;}
+.inv-ban-ico{width:40px;height:40px;min-width:40px;background:#F59E0B;border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.inv-ban-ico svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2;}
+.inv-ban-title{font-size:14px;font-weight:700;color:var(--text-primary);}
+.inv-ban-from{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+.inv-ban-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+
+/* User Cards */
+.users-list{display:flex;flex-direction:column;gap:12px;}
+.user-card{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:18px;overflow:hidden;transition:border-color .18s,box-shadow .18s;animation:slideUp .3s ease both;}
+.user-card:hover{border-color:var(--border-default);box-shadow:0 4px 24px rgba(0,0,0,.1);}
+.user-card-top{display:flex;align-items:center;gap:14px;padding:18px 18px 0;}
+.u-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:white;flex-shrink:0;}
+.user-card-info{flex:1;min-width:0;}
+.user-card-name{font-size:15px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-card-email{font-size:11.5px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.u-status{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;background:rgba(16,185,129,.12);color:#10B981;border:1px solid rgba(16,185,129,.25);flex-shrink:0;}
+
+/* Perms */
+.user-perms{padding:14px 18px;display:flex;flex-wrap:wrap;gap:5px;border-top:1px solid var(--border-subtle);margin-top:12px;}
+.perm-chip{font-size:10.5px;font-weight:600;font-family:'JetBrains Mono',monospace;padding:3px 8px;background:var(--primary-soft);border:1px solid var(--primary-border);border-radius:5px;color:#818CF8;}
+.perm-more{font-size:10.5px;font-weight:600;padding:3px 8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:5px;color:var(--text-secondary);}
+.no-perms-txt{font-size:12px;color:var(--text-muted);font-style:italic;}
+
+/* Card Actions */
+.user-card-actions{display:flex;gap:0;border-top:1px solid var(--border-subtle);}
+.card-act{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;font-family:inherit;color:var(--text-secondary);transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.card-act svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;}
+.card-act.edit:hover{background:var(--primary-soft);color:var(--primary);}
+.card-act.del:hover{background:rgba(239,68,68,.06);color:var(--danger);}
+.card-act-div{width:1px;background:var(--border-subtle);flex-shrink:0;}
+
+/* Pending */
+.pending-item{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border-subtle);}
+.pending-item:last-child{border-bottom:none;}
+.p-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;flex-shrink:0;}
+.p-email{font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.p-date{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+/* Workspace Cards */
+.ws-card{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:18px;overflow:hidden;margin-bottom:14px;animation:slideUp .3s ease both;}
+.ws-head{display:flex;align-items:center;gap:12px;padding:16px 18px;background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle);}
+.ws-owner-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:white;flex-shrink:0;}
+.ws-owner-name{font-size:14px;font-weight:700;color:var(--text-primary);}
+.ws-owner-email{font-size:11.5px;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;}
+.ws-perms{display:flex;flex-wrap:wrap;gap:4px;padding:12px 18px;border-bottom:1px solid var(--border-subtle);}
+.ws-files-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);}
+.ws-file-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-subtle);}
+.ws-file-row:last-child{border-bottom:none;}
+.ws-ext{width:30px;height:30px;border-radius:7px;background:var(--primary-soft);border:1px solid var(--primary-border);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#818CF8;flex-shrink:0;text-transform:uppercase;}
+.ws-fname{flex:1;font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ws-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.ws-acts{display:flex;gap:5px;flex-shrink:0;}
+
+/* Perm Editor Modal */
+.perm-master-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-sm);margin-bottom:14px;}
+.perm-section{border:1px solid var(--border-subtle);border-radius:var(--radius-md);overflow:hidden;margin-bottom:10px;}
+.perm-section-head{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg-elevated);cursor:pointer;user-select:none;}
+.perm-grp-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.perm-section-title{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text-secondary);flex:1;}
+.perm-section-body{padding:2px 0;}
+.perm-item{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;transition:background .12s;}
+.perm-item:hover{background:rgba(91,110,247,0.03);}
+.perm-item+.perm-item{border-top:1px solid var(--border-subtle);}
+.perm-item-name{font-size:13px;font-weight:600;color:var(--text-primary);font-family:'JetBrains Mono',monospace;}
+.perm-item-desc{font-size:11.5px;color:var(--text-secondary);margin-top:2px;}
+
+@media(max-width:600px){
+  .sub-tabs{width:100%;}
+  .sub-tab{flex:1;justify-content:center;}
+  .user-card-top{padding:14px 14px 0;}
+  .user-perms{padding:10px 14px;}
+  .card-act{padding:12px 8px;font-size:12px;gap:5px;}
+}
+</style>
+</head>
+<script>
+(function(){
+  var sid=localStorage.getItem('nsid');
+  if(!sid){window.location.replace('/');return;}
+  document.documentElement.style.visibility='hidden';
+  fetch('/api/auth/me',{headers:{'X-Session-Id':sid}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.success){document.documentElement.style.visibility='';}
+      else{localStorage.removeItem('nsid');window.location.replace('/');}
+    })
+    .catch(function(){document.documentElement.style.visibility='';});
+})();
+</script>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="/dashboard">
+      <div class="sidebar-brand-icon"><svg viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div>
+      <div class="sidebar-brand-text">Nexora<span>Cloud</span></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="/dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-item" href="/files"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+      <a class="nav-item" href="/bots"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bot Manager</a>
+      <a class="nav-item" href="/editor"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Code Editor</a>
+      <div class="nav-section-label" style="margin-top:8px">Workspace</div>
+      <a class="nav-item" href="/activity"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity Log</a>
+      <a class="nav-item" href="/support"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Support</a>
+      <a class="nav-item active" href="/subusers"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Sub-Users</a>
+      <a class="nav-item" href="/settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+      <div id="adminNavLink" style="display:none">
+        <div class="nav-section-label" style="margin-top:8px">Admin</div>
+        <a class="nav-item" href="/admin"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Admin Panel</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" onclick="window.location.href='/settings'">
+        <div class="sidebar-avatar" id="sAvatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-name" id="sName">Loading…</div><div class="sidebar-user-role" id="sRole">—</div></div>
+        <button class="sidebar-logout-btn" onclick="event.stopPropagation();doLogout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sOverlay" onclick="closeSidebar()"></div>
+
+  <div class="topbar" id="topbar">
+    <button class="topbar-menu-btn" onclick="openSidebar()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-brand">Nexora<span>Cloud</span></span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+      <div style="position:relative">
+        <button class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" title="Notifications">
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-head"><span class="notif-head-title">Notifications</span><button class="notif-mark-all" onclick="markAllRead()">Mark all read</button></div>
+          <div class="notif-list" id="notifList"><div class="notif-empty">🔔 No notifications</div></div>
+        </div>
+      </div>
+      <div class="topbar-avatar" id="tAvatar">?</div>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <div class="page-inner">
+      <div class="su-header">
+        <div>
+          <div class="su-title">Sub-Users</div>
+          <div class="su-sub">Manage team access to your workspace</div>
+        </div>
+        <button class="btn btn-primary" onclick="openInviteModal()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Invite User
+        </button>
+      </div>
+
+      <!-- Pending invite banner -->
+      <div id="pendingInviteBanner" style="display:none" class="invite-banner">
+        <div class="inv-ban-ico"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div style="flex:1;min-width:0">
+          <div class="inv-ban-title">You have a pending workspace invite!</div>
+          <div class="inv-ban-from" id="inviteBannerSub">From: …</div>
+          <div class="inv-ban-btns">
+            <button class="btn btn-success btn-sm" onclick="respondInvite('accept')">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Accept
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="respondInvite('decline')">Decline</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main tabs -->
+      <div class="main-tabs">
+        <button class="main-tab active" id="tabMyTeam" onclick="switchMainTab('myteam')">My Team</button>
+        <button class="main-tab" id="tabWorkspaces" onclick="switchMainTab('workspaces')">Shared Workspaces</button>
+      </div>
+
+      <!-- My Team -->
+      <div id="myTeamView">
+        <div class="sub-tabs">
+          <button class="sub-tab active" id="tabActive" onclick="switchSubTab('active')">Active</button>
+          <button class="sub-tab" id="tabPending" onclick="switchSubTab('pending')">
+            Pending <span class="sub-badge" id="pendingBadge" style="display:none">0</span>
+          </button>
+        </div>
+        <div id="activeView"><div id="usersWrap"></div></div>
+        <div id="pendingView" style="display:none">
+          <div class="card" id="pendingWrap"><div id="pendingList"></div></div>
+        </div>
+      </div>
+
+      <!-- Workspaces -->
+      <div id="workspacesView" style="display:none">
+        <div id="workspacesList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Invite/Edit Modal -->
+<div class="modal-overlay" id="inviteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="inviteModalTitle">Invite Sub-User</div>
+        <div class="modal-subtitle" id="inviteModalSub">Set email and permissions</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('inviteModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" id="emailGroup">
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-input" id="inviteEmail" placeholder="user@example.com" autocomplete="off"/>
+        <div class="form-hint">User must already have a Nexora Cloud account.</div>
+      </div>
+      <div class="divider" id="emailDivider"></div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:13.5px;font-weight:700;color:var(--text-primary)">Permissions</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">Choose what this user can do</div>
+      </div>
+      <div class="perm-master-row">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary)">All Permissions</div>
+          <div style="font-size:11.5px;color:var(--text-secondary);margin-top:1px">Grant complete access</div>
+        </div>
+        <div class="tog" id="masterTog" onclick="toggleMaster(this)"></div>
+      </div>
+      <div id="permSections"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('inviteModal')">Cancel</button>
+      <button class="btn btn-primary" id="inviteConfirmBtn" onclick="confirmInvite()">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remove Modal -->
+<div class="modal-overlay" id="removeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Remove Sub-User</div><div class="modal-subtitle">Cannot be undone</div></div>
+      <button class="modal-close" onclick="closeModal('removeModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary);font-size:14px;line-height:1.6">Remove <strong id="removeEmailDisplay" style="color:var(--text-primary)"></strong> from your team? They will lose all access immediately.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('removeModal')">Cancel</button>
+      <button class="btn btn-danger" id="removeConfirmBtn" onclick="confirmRemove()">Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- File Viewer Modal -->
+<div class="modal-overlay" id="fileViewModal">
+  <div class="modal" style="max-width:680px;width:95vw">
+    <div class="modal-header">
+      <div><div class="modal-title" id="fileViewTitle">File Content</div><div class="modal-subtitle" id="fileViewSub"></div></div>
+      <button class="modal-close" onclick="closeModal('fileViewModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <pre id="fileViewContent" style="padding:16px;font-size:12px;font-family:'JetBrains Mono',monospace;color:#CBD5FF;background:var(--bg-base);max-height:60vh;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-all"></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- Workspace File Edit Modal -->
+<div class="modal-overlay" id="wsEditModal">
+  <div class="modal" style="max-width:720px;width:95vw">
+    <div class="modal-header">
+      <div><div class="modal-title" id="wsEditTitle">Edit File</div><div class="modal-subtitle" id="wsEditSub"></div></div>
+      <button class="modal-close" onclick="closeModal('wsEditModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <textarea id="wsEditContent" style="width:100%;min-height:52vh;background:var(--bg-base);border:none;outline:none;color:#CBD5FF;font-family:'JetBrains Mono',monospace;font-size:13px;padding:16px;resize:vertical;box-sizing:border-box;line-height:1.6"></textarea>
+    </div>
+    <div class="modal-footer" style="justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('wsEditModal')">Cancel</button>
+      <button class="btn btn-primary" id="wsEditSaveBtn" onclick="saveWsEdit()" style="margin-left:8px">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Workspace Upload Modal -->
+<div class="modal-overlay" id="wsUploadModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Upload File</div><div class="modal-subtitle" id="wsUploadSub">Upload to workspace</div></div>
+      <button class="modal-close" onclick="closeModal('wsUploadModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:12px">
+        <label class="form-label">File Name</label>
+        <input class="form-input" id="wsUploadName" placeholder="e.g. bot.py"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">File Content</label>
+        <textarea class="form-textarea" id="wsUploadContent" placeholder="Paste or type file content here…" style="min-height:160px;font-family:'JetBrains Mono',monospace;font-size:12.5px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('wsUploadModal')">Cancel</button>
+      <button class="btn btn-primary" id="wsUploadBtn" onclick="confirmWsUpload()" style="margin-left:8px">Upload File</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+<script>
+const SID = () => localStorage.getItem("nsid") || "";
+const api = (p,o={}) => fetch(p,{headers:{"X-Session-Id":SID(),"Content-Type":"application/json",...(o.headers||{})}, ...o});
+const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmtDate = iso => { try{return new Date(iso).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "";} };
+const AVC=["#5B6EF7","#8B5CF6","#EC4899","#F59E0B","#10B981","#38BDF8","#EF4444","#6366F1","#14B8A6","#F97316"];
+const avc = n => AVC[(n||"?").charCodeAt(0)%AVC.length];
+function openSidebar(){document.getElementById("sidebar").classList.add("open");document.getElementById("sOverlay").classList.add("open");document.body.style.overflow="hidden";}
+function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sOverlay").classList.remove("open");document.body.style.overflow="";}
+
+// ── Clear Firebase IndexedDB on logout ──────────────────────
+// signOut alone leaves stale OAuth state in IndexedDB → next
+// signInWithPopup silently fails. Clear all 3 DBs on logout.
+
+async function _clearAllFirebaseState() {
+  // ── Step 1: Clear Firebase IDB by OPENING + CLEARING (not deleteDatabase) ──
+  // deleteDatabase() is BLOCKED when Firebase SDK has the DB open,
+  // so it silently "succeeds" without deleting anything. Opening directly
+  // and clearing records works even with open connections.
+  await new Promise(resolve => {
+    try {
+      const req = indexedDB.open("firebaseLocalStorageDb");
+      req.onerror = () => resolve();
+      req.onsuccess = () => {
+        const db = req.result;
+        try {
+          const stores = Array.from(db.objectStoreNames);
+          if (!stores.length) { db.close(); resolve(); return; }
+          const tx = db.transaction(stores, "readwrite");
+          stores.forEach(s => { try { tx.objectStore(s).clear(); } catch(_) {} });
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror   = () => { db.close(); resolve(); };
+        } catch(_) { try { db.close(); } catch(_){} resolve(); }
+      };
+    } catch(_) { resolve(); }
+  });
+
+  // ── Step 2: Delete the other Firebase DBs (no open connections on these) ──
+  await Promise.all([
+    "firebase-heartbeat-database",
+    "firebase-installations-database"
+  ].map(name => new Promise(res => {
+    try { const r = indexedDB.deleteDatabase(name); r.onsuccess = r.onerror = r.onblocked = () => res(); }
+    catch(_) { res(); }
+  })));
+
+  // ── Step 3: Wipe firebase: keys from sessionStorage ──────────────────────
+  try {
+    Object.keys(sessionStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) sessionStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 4: Wipe firebase: keys from localStorage ────────────────────────
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) localStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 5: Expire Firebase cookies ──────────────────────────────────────
+  try {
+    const host = window.location.hostname;
+    const domains = [host, "." + host, ""];
+    const paths   = ["/", ""];
+    document.cookie.split(";").forEach(raw => {
+      const name = raw.trim().split("=")[0].trim();
+      if (!name) return;
+      const isFB = name.startsWith("firebase:") || name.startsWith("firebaseui:")
+                || name.startsWith("__Secure-firebase") || name.includes("firebase");
+      if (!isFB) return;
+      domains.forEach(d => paths.forEach(p => {
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;SameSite=None;Secure" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+      }));
+    });
+  } catch(_) {}
+}
+
+async function doLogout() {
+  try {
+    // Step 1: Firebase signOut (CRITICAL!)
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const app = initializeApp({apiKey:"AIzaSyATmS9Zy8YIxXf1qYpUB6wIw45i7K-3YVU",authDomain:"hosting-website-bot-v9-v1.firebaseapp.com",projectId:"hosting-website-bot-v9-v1"});
+    const auth = getAuth(app);
+    await signOut(auth);
+    
+    // Step 2: Backend session invalidation
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-Session-Id": localStorage.getItem("nsid") || "" }
+    }).catch(() => {});
+
+    // Step 3: Clear ALL Firebase persistent state
+    await _clearAllFirebaseState().catch(() => {});
+
+    // Step 4: Wipe all local state
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Step 5: Navigate with cache-buster
+    window.location.href = "/?" + Date.now();
+  } catch(err) {
+    console.error('Logout error:', err);
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = "/?" + Date.now();
+  }
+}
+function setAvatar(l,c){document.querySelectorAll(".sidebar-avatar,.topbar-avatar").forEach(el=>{el.textContent=l;el.style.background=c;});}
+function closeModal(id){document.getElementById(id).classList.remove("open");}
+function openModal(id){document.getElementById(id).classList.add("open");}
+function toast(msg,type="info"){
+  const IC={success:`<svg class="toast-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,error:`<svg class="toast-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,warning:`<svg class="toast-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,info:`<svg class="toast-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`};
+  const c=document.getElementById("toastStack");const el=document.createElement("div");
+  el.className=`toast toast-${type}`;el.innerHTML=`${IC[type]||IC.info}<span>${esc(msg)}</span>`;
+  c.appendChild(el);setTimeout(()=>{el.classList.add("toast-out");el.addEventListener("animationend",()=>el.remove(),{once:true});},4000);
+}
+
+// Permission definitions
+const PERMS=[
+  {group:"FILES",emoji:"📁",color:"rgba(91,110,247,.12)",items:[
+    {key:"files.read",label:"files.read",desc:"View file list and contents"},
+    {key:"files.edit",label:"files.edit",desc:"Modify and save files"},
+    {key:"files.delete",label:"files.delete",desc:"Delete files permanently"},
+    {key:"files.upload",label:"files.upload",desc:"Upload new files"},
+  ]},
+  {group:"BOTS",emoji:"🤖",color:"rgba(16,185,129,.12)",items:[
+    {key:"bots.view",label:"bots.view",desc:"View bot list and status"},
+    {key:"bots.start",label:"bots.start",desc:"Start, stop and restart bots"},
+    {key:"bots.create",label:"bots.create",desc:"Set up and configure new bots"},
+  ]},
+  {group:"EDITOR",emoji:"💻",color:"rgba(245,158,11,.12)",items:[
+    {key:"editor.access",label:"editor.access",desc:"Access the code editor"},
+  ]},
+];
+
+let subUsers=[], pendingInvites=[], editingEmail=null, removingEmail=null;
+
+function switchMainTab(tab){
+  document.getElementById("myTeamView").style.display=tab==="myteam"?"block":"none";
+  document.getElementById("workspacesView").style.display=tab==="workspaces"?"block":"none";
+  document.getElementById("tabMyTeam").classList.toggle("active",tab==="myteam");
+  document.getElementById("tabWorkspaces").classList.toggle("active",tab==="workspaces");
+  if(tab==="workspaces") loadWorkspaces();
+}
+function switchSubTab(tab){
+  document.getElementById("activeView").style.display=tab==="active"?"block":"none";
+  document.getElementById("pendingView").style.display=tab==="pending"?"block":"none";
+  document.getElementById("tabActive").classList.toggle("active",tab==="active");
+  document.getElementById("tabPending").classList.toggle("active",tab==="pending");
+}
+
+function buildPermSections(selected=[]){
+  const sel=new Set(selected);
+  return PERMS.map(g=>`
+    <div class="perm-section">
+      <div class="perm-section-head" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <div class="perm-grp-icon" style="background:${g.color}">${g.emoji}</div>
+        <span class="perm-section-title">${esc(g.group)}</span>
+        <svg style="width:14px;height:14px;stroke:var(--text-muted);fill:none;stroke-width:2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="perm-section-body" style="display:block">
+        ${g.items.map(it=>`
+          <div class="perm-item">
+            <div>
+              <div class="perm-item-name">${esc(it.label)}</div>
+              <div class="perm-item-desc">${esc(it.desc)}</div>
+            </div>
+            <div class="tog ${sel.has(it.key)?"active":""}" data-perm="${esc(it.key)}" onclick="togglePerm(this)"></div>
+          </div>`).join("")}
+      </div>
+    </div>`).join("");
+}
+
+function togglePerm(el){el.classList.toggle("active");syncMasterTog();}
+function syncMasterTog(){
+  const all=document.querySelectorAll("#permSections .tog[data-perm]");
+  const active=document.querySelectorAll("#permSections .tog[data-perm].active");
+  const m=document.getElementById("masterTog");if(!m)return;
+  m.classList.toggle("active",all.length>0&&active.length===all.length);
+}
+function toggleMaster(el){
+  const on=!el.classList.contains("active");
+  el.classList.toggle("active",on);
+  document.querySelectorAll("#permSections .tog[data-perm]").forEach(t=>t.classList.toggle("active",on));
+}
+
+function openInviteModal(email=null,perms=[]){
+  editingEmail=email;
+  const isEdit=!!email;
+  document.getElementById("inviteModalTitle").textContent=isEdit?"Edit Permissions":"Invite Sub-User";
+  document.getElementById("inviteModalSub").textContent=isEdit?`Editing: ${email}`:"Set email and access permissions";
+  document.getElementById("emailGroup").style.display=isEdit?"none":"block";
+  document.getElementById("emailDivider").style.display=isEdit?"none":"block";
+  document.getElementById("inviteEmail").value=email||"";
+  document.getElementById("permSections").innerHTML=buildPermSections(perms);
+  syncMasterTog();
+  const btn=document.getElementById("inviteConfirmBtn");
+  btn.textContent=isEdit?"💾 Save Changes":"📨 Send Invite";
+  openModal("inviteModal");
+}
+
+async function confirmInvite(){
+  const email=editingEmail||document.getElementById("inviteEmail").value.trim();
+  if(!email){toast("Enter an email address","warning");return;}
+  const perms=[...document.querySelectorAll("#permSections .tog[data-perm].active")].map(t=>t.dataset.perm);
+  const btn=document.getElementById("inviteConfirmBtn");btn.disabled=true;
+  try{
+    const endpoint=editingEmail?"/api/subusers/update":"/api/subusers/invite";
+    const r=await api(endpoint,{method:"POST",body:JSON.stringify({email,permissions:perms})});
+    const d=await r.json();
+    if(d.success){
+      toast(editingEmail?"✅ Permissions updated!":"📨 Invite sent!","success");
+      closeModal("inviteModal");loadUsers();
+    } else toast(d.error||"Failed","error");
+  }catch(e){toast("Network error","error");}
+  finally{btn.disabled=false;editingEmail=null;}
+}
+
+function openRemoveModal(email){
+  removingEmail=email;
+  document.getElementById("removeEmailDisplay").textContent=email;
+  openModal("removeModal");
+}
+async function confirmRemove(){
+  if(!removingEmail)return;
+  const btn=document.getElementById("removeConfirmBtn");btn.disabled=true;
+  try{
+    const r=await api("/api/subusers/remove",{method:"POST",body:JSON.stringify({email:removingEmail})});
+    const d=await r.json();
+    if(d.success){toast("User removed","success");closeModal("removeModal");loadUsers();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Network error","error");}
+  finally{btn.disabled=false;removingEmail=null;}
+}
+
+async function cancelInvite(email){
+  try{
+    const r=await api("/api/subusers/cancel_invite",{method:"POST",body:JSON.stringify({email})});
+    const d=await r.json();
+    if(d.success){toast("Invite cancelled","success");loadUsers();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Network error","error");}
+}
+
+async function respondInvite(action){
+  try{
+    const r=await api("/api/subusers/respond",{method:"POST",body:JSON.stringify({action})});
+    const d=await r.json();
+    if(d.success){
+      toast(action==="accept"?"✅ Workspace joined!":"Invite declined","success");
+      document.getElementById("pendingInviteBanner").style.display="none";
+      if(action==="accept") switchMainTab("workspaces");
+    } else toast(d.error||"Failed","error");
+  }catch(e){toast("Network error","error");}
+}
+
+function renderUsers(){
+  const wrap=document.getElementById("usersWrap");
+  if(!subUsers.length){
+    wrap.innerHTML=`<div class="empty-state" style="padding:48px 20px">
+      <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div class="empty-title">No sub-users yet</div>
+      <div class="empty-subtitle">Invite team members to give them controlled access to your bots and files.</div>
+      <button class="btn btn-primary" onclick="openInviteModal()">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Invite First User
+      </button>
+    </div>`;return;
+  }
+  wrap.innerHTML=`<div class="users-list">${subUsers.map((u,i)=>{
+    const perms=u.permissions||[];
+    const chips=perms.slice(0,4).map(p=>`<span class="perm-chip">${esc(p)}</span>`).join("");
+    const more=perms.length>4?`<span class="perm-more">+${perms.length-4} more</span>`:"";
+    const letter=(u.name||u.email||"?")[0].toUpperCase();
+    const color=avc(u.name||u.email);
+    return `<div class="user-card" style="animation-delay:${i*0.05}s">
+      <div class="user-card-top">
+        <div class="u-avatar" style="background:${color}">${letter}</div>
+        <div class="user-card-info">
+          <div class="user-card-name">${esc(u.name||u.email.split("@")[0])}</div>
+          <div class="user-card-email">${esc(u.email)}</div>
+        </div>
+        <span class="u-status">Active</span>
+      </div>
+      <div class="user-perms">
+        ${chips||'<span class="no-perms-txt">No permissions</span>'}${more}
+      </div>
+      <div class="user-card-actions">
+        <button class="card-act edit" onclick="openInviteModal('${esc(u.email)}',${JSON.stringify(perms)})">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit Permissions
+        </button>
+        <div class="card-act-div"></div>
+        <button class="card-act del" onclick="openRemoveModal('${esc(u.email)}')">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Remove
+        </button>
+      </div>
+    </div>`;
+  }).join("")}</div>`;
+}
+
+function renderPending(){
+  const wrap=document.getElementById("pendingList");
+  const badge=document.getElementById("pendingBadge");
+  if(!pendingInvites.length){
+    badge.style.display="none";
+    wrap.innerHTML=`<div style="padding:28px;text-align:center;color:var(--text-muted);font-size:13px">No pending invites</div>`;return;
+  }
+  badge.style.display="flex";badge.textContent=pendingInvites.length;
+  wrap.innerHTML=pendingInvites.map(inv=>`
+    <div class="pending-item">
+      <div class="p-av" style="background:${avc(inv.email)}">${(inv.email||"?")[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div class="p-email">${esc(inv.email)}</div>
+        <div class="p-date">Sent ${fmtDate(inv.created_at)}</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="cancelInvite('${esc(inv.email)}')">Cancel</button>
+    </div>`).join("");
+}
+
+async function loadUsers(){
+  try{
+    const r=await api("/api/subusers/list");const d=await r.json();
+    if(d.success){subUsers=d.users||[];pendingInvites=d.pending||[];renderUsers();renderPending();}
+  }catch(e){console.warn(e);}
+}
+
+async function loadWorkspaces(){
+  const wrap=document.getElementById("workspacesList");
+  wrap.innerHTML=`<div style="text-align:center;padding:30px;color:var(--text-muted)"><svg style="width:24px;height:24px;stroke:var(--text-muted);fill:none;stroke-width:2;animation:spin 1s linear infinite" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>`;
+  try{
+    const r=await api("/api/subusers/workspace");const d=await r.json();
+    if(!d.success||!d.workspaces?.length){
+      wrap.innerHTML=`<div class="empty-state" style="padding:48px 20px">
+        <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="empty-title">No shared workspaces</div>
+        <div class="empty-subtitle">You haven't been invited to any workspace yet.</div>
+      </div>`;return;
+    }
+    wrap.innerHTML=d.workspaces.map((ws,i)=>{
+      const chips=(ws.permissions||[]).map(p=>`<span class="perm-chip">${esc(p)}</span>`).join("");
+      const letter=(ws.owner_name||ws.owner_email||"?")[0].toUpperCase();
+      const color=avc(ws.owner_email||"");
+      const P=new Set(ws.permissions||[]);
+      const canView  = P.has("files.read")||P.has("editor.access")||P.has("all");
+      const canEdit  = P.has("files.edit")||P.has("all");
+      const canDel   = P.has("files.delete")||P.has("all");
+      const canStart = P.has("bots.start")||P.has("all");
+      const canUpload= P.has("files.upload")||P.has("all");
+
+      const uploadBtn = canUpload ? `<button class="btn btn-secondary btn-sm" onclick="openWsUpload('${esc(ws.owner_uid)}')">+ Upload</button>` : "";
+
+      const fileRows=(ws.files||[]).slice(0,20).map(f=>{
+        const ext=(f.name||"").split(".").pop()||"?";
+        const isActive=f.status==="active";
+        return `<div class="ws-file-row">
+          <div class="ws-ext">${esc(ext.toUpperCase())}</div>
+          <div class="ws-fname">${esc(f.name)}</div>
+          <div class="ws-dot" style="background:${isActive?"#10B981":"#64748B"};width:7px;height:7px;border-radius:50%;flex-shrink:0"></div>
+          <div class="ws-acts" style="display:flex;gap:4px;flex-wrap:wrap">
+            ${canView?`<button class="btn btn-secondary btn-sm" onclick="viewWsFile('${esc(ws.owner_uid)}','${esc(f.id)}','${esc(f.name)}')">View</button>`:""}
+            ${canEdit?`<button class="btn btn-secondary btn-sm" onclick="editWsFile('${esc(ws.owner_uid)}','${esc(f.id)}','${esc(f.name)}')">Edit</button>`:""}
+            ${canStart?(isActive
+              ?`<button class="btn btn-warning btn-sm" onclick="toggleWsBot('${esc(ws.owner_uid)}','${esc(f.id)}','stop',this)">Stop</button>`
+              :`<button class="btn btn-success btn-sm" onclick="toggleWsBot('${esc(ws.owner_uid)}','${esc(f.id)}','start',this)">Start</button>`):""}
+            ${canDel?`<button class="btn btn-danger btn-sm" onclick="deleteWsFile('${esc(ws.owner_uid)}','${esc(f.id)}','${esc(f.name)}')">Del</button>`:""}
+          </div>
+        </div>`;
+      }).join("");
+
+      const noFiles = (ws.files||[]).length===0 ? `<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No files in workspace</div>` : "";
+
+      return `<div class="ws-card" style="animation-delay:${i*0.06}s">
+        <div class="ws-head">
+          <div class="ws-owner-av" style="background:${color}">${letter}</div>
+          <div style="flex:1;min-width:0">
+            <div class="ws-owner-name">${esc(ws.owner_name||ws.owner_email?.split("@")[0]||"Unknown")}</div>
+            <div class="ws-owner-email">${esc(ws.owner_email||"")}</div>
+          </div>
+          ${uploadBtn}
+        </div>
+        <div class="ws-perms">${chips||'<span style="color:var(--text-muted);font-size:12px">No permissions</span>'}</div>
+        <div style="padding:14px 18px">
+          <div class="ws-files-label" style="margin-bottom:10px">Shared Files (${(ws.files||[]).length})</div>
+          ${fileRows}${noFiles}
+        </div>
+      </div>`;
+    }).join("");
+  }catch(e){wrap.innerHTML=`<div style="text-align:center;padding:20px;color:var(--danger)">Failed to load</div>`;}
+}
+
+async function viewWsFile(ownerUid,fileId,fileName){
+  document.getElementById("fileViewTitle").textContent=fileName;
+  document.getElementById("fileViewContent").textContent="Loading…";
+  openModal("fileViewModal");
+  try{
+    const r=await api(`/api/subusers/workspace/file/content/${ownerUid}/${fileId}`);
+    const d=await r.json();
+    document.getElementById("fileViewContent").textContent=d.success?d.content:(d.error||"Could not load");
+  }catch(e){document.getElementById("fileViewContent").textContent="Failed to load";}
+}
+async function toggleWsBot(ownerUid,fileId,action,btn){
+  btn.disabled=true;
+  try{
+    const r=await api("/api/subusers/workspace/file/action",{method:"POST",body:JSON.stringify({owner_uid:ownerUid,file_id:fileId,action})});
+    const d=await r.json();
+    if(d.success){toast(`Bot ${action==="start"?"started":"stopped"}`,"success");loadWorkspaces();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Network error","error");}
+  finally{btn.disabled=false;}
+}
+
+
+// ── Workspace: Edit File ──
+let wsEditCtx = null;
+async function editWsFile(ownerUid, fileId, fileName) {
+  wsEditCtx = {ownerUid, fileId};
+  document.getElementById("wsEditTitle").textContent = "Edit: " + fileName;
+  document.getElementById("wsEditSub").textContent = "Changes will be saved to the workspace";
+  document.getElementById("wsEditContent").value = "Loading…";
+  openModal("wsEditModal");
+  try {
+    const r = await api(`/api/subusers/workspace/file/content/${ownerUid}/${fileId}`);
+    const d = await r.json();
+    document.getElementById("wsEditContent").value = d.success ? d.content : (d.error || "Could not load");
+  } catch(e) { document.getElementById("wsEditContent").value = "Failed to load"; }
+}
+async function saveWsEdit() {
+  if (!wsEditCtx) return;
+  const content = document.getElementById("wsEditContent").value;
+  const btn = document.getElementById("wsEditSaveBtn"); btn.disabled=true; btn.textContent="Saving…";
+  try {
+    const r = await api("/api/subusers/workspace/file/save", {method:"POST", body:JSON.stringify({owner_uid:wsEditCtx.ownerUid, file_id:wsEditCtx.fileId, content})});
+    const d = await r.json();
+    if (d.success) { toast("File saved ✓", "success"); closeModal("wsEditModal"); }
+    else toast(d.error || "Save failed", "error");
+  } catch(e) { toast("Network error", "error"); }
+  finally { btn.disabled=false; btn.innerHTML='<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save Changes'; }
+}
+
+// ── Workspace: Delete File ──
+async function deleteWsFile(ownerUid, fileId, fileName) {
+  if (!confirm(`Delete "${fileName}" from workspace? This cannot be undone.`)) return;
+  try {
+    const r = await api("/api/subusers/workspace/file/delete", {method:"POST", body:JSON.stringify({owner_uid:ownerUid, file_id:fileId})});
+    const d = await r.json();
+    if (d.success) { toast("File deleted", "success"); loadWorkspaces(); }
+    else toast(d.error || "Delete failed", "error");
+  } catch(e) { toast("Network error", "error"); }
+}
+
+// ── Workspace: Upload File ──
+let wsUploadOwner = null;
+function openWsUpload(ownerUid) {
+  wsUploadOwner = ownerUid;
+  document.getElementById("wsUploadName").value = "";
+  document.getElementById("wsUploadContent").value = "";
+  openModal("wsUploadModal");
+}
+async function confirmWsUpload() {
+  const name = document.getElementById("wsUploadName").value.trim();
+  const content = document.getElementById("wsUploadContent").value;
+  if (!name) { toast("Enter a file name", "warning"); return; }
+  if (!wsUploadOwner) return;
+  const btn = document.getElementById("wsUploadBtn"); btn.disabled=true; btn.textContent="Uploading…";
+  try {
+    const r = await api("/api/subusers/workspace/file/upload", {method:"POST", body:JSON.stringify({owner_uid:wsUploadOwner, name, content})});
+    const d = await r.json();
+    if (d.success) { toast("File uploaded ✓", "success"); closeModal("wsUploadModal"); loadWorkspaces(); }
+    else toast(d.error || "Upload failed", "error");
+  } catch(e) { toast("Network error", "error"); }
+  finally { btn.disabled=false; btn.textContent="Upload File"; }
+}
+
+async function checkMyInvite(){
+  try{
+    const r=await api("/api/subusers/my_invite");const d=await r.json();
+    if(d.success&&d.invite){
+      document.getElementById("inviteBannerSub").textContent=`From: ${d.invite.owner_email||"Unknown"}`;
+      document.getElementById("pendingInviteBanner").style.display="flex";
+    }
+  }catch(e){}
+}
+
+async function init(){
+  if(!SID()){window.location.href="/";return;}
+  try{
+    const r=await api("/api/auth/me");if(!r.ok){window.location.href="/";return;}
+    const d=await r.json();const u=d.user;
+    const letter=(u.name||u.email||"?")[0].toUpperCase();
+    const color=avc(u.name||u.email);
+    setAvatar(letter,color);
+    document.getElementById("sName").textContent=u.name||u.email;
+    document.getElementById("sRole").textContent=u.role||"free";
+    if(["admin","owner"].includes(u.role)) document.getElementById("adminNavLink").style.display="block";
+  }catch(e){window.location.href="/";return;}
+  await Promise.all([loadUsers(),checkMyInvite()]);
+}
+init();
+</script>
+</body>
+</html>

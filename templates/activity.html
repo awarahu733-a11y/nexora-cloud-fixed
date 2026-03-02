@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><meta name="apple-mobile-web-app-title" content="Nexora"/><meta name="theme-color" content="#5B6EF7"/><link rel="manifest" href="/manifest.json"/>
+<title>Activity Log — Nexora Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include '_shell.html' %}
+<style>
+.filter-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:18px;}
+.filter-chip{padding:6px 14px;border-radius:100px;font-size:12.5px;font-weight:600;border:1px solid var(--border-default);background:var(--bg-elevated);color:var(--text-secondary);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.filter-chip:hover{border-color:var(--border-strong);color:var(--text-primary);}
+.filter-chip.active{background:var(--primary-soft);border-color:var(--primary-border);color:#818CF8;}
+.act-row{display:flex;align-items:center;gap:13px;padding:13px 20px;border-bottom:1px solid var(--border-subtle);transition:background .15s;}
+.act-row:last-child{border-bottom:none;}
+.act-row:hover{background:rgba(91,110,247,0.025);}
+.act-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.act-ico svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;}
+.act-body{flex:1;min-width:0;}
+.act-msg{font-size:13px;color:var(--text-primary);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.act-category{font-size:11px;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:.6px;font-weight:600;}
+.act-time{font-size:11.5px;color:var(--text-muted);flex-shrink:0;white-space:nowrap;}
+.act-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;flex-shrink:0;}
+.day-separator{padding:8px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle);}
+</style>
+</head>
+<script>
+(function(){
+  var sid=localStorage.getItem('nsid');
+  if(!sid){window.location.replace('/');return;}
+  document.documentElement.style.visibility='hidden';
+  fetch('/api/auth/me',{headers:{'X-Session-Id':sid}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.success){document.documentElement.style.visibility='';}
+      else{localStorage.removeItem('nsid');window.location.replace('/');}
+    })
+    .catch(function(){document.documentElement.style.visibility='';});
+})();
+</script>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="/dashboard">
+      <div class="sidebar-brand-icon"><svg viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div>
+      <div class="sidebar-brand-text">Nexora<span>Cloud</span></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="/dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-item" href="/files"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+      <a class="nav-item" href="/bots"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bot Manager</a>
+      <a class="nav-item" href="/editor"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Code Editor</a>
+      <div class="nav-section-label" style="margin-top:8px">Workspace</div>
+      <a class="nav-item active" href="/activity"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity Log</a>
+      <a class="nav-item" href="/support"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Support</a>
+      <a class="nav-item" href="/subusers"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Sub-Users</a>
+      <a class="nav-item" href="/settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+      <div id="adminNavItem" style="display:none">
+        <div class="nav-section-label" style="margin-top:8px">Admin</div>
+        <a class="nav-item" href="/admin"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Admin Panel</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" onclick="window.location.href='/settings'">
+        <div class="sidebar-avatar" id="sAvatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-name" id="sName">Loading…</div><div class="sidebar-user-role" id="sRole">—</div></div>
+        <button class="sidebar-logout-btn" onclick="event.stopPropagation();doLogout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sOverlay" onclick="closeSidebar()"></div>
+  <div class="topbar" id="topbar">
+    <button class="topbar-menu-btn" onclick="openSidebar()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-brand">Nexora<span>Cloud</span></span>
+    <div class="topbar-right" style="display:flex;align-items:center;gap:8px"><button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Light Mode"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button><div style="position:relative"><button class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" title="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notif-badge" id="notifBadge" style="display:none">0</span></button><div class="notif-dropdown" id="notifDropdown"><div class="notif-head"><span class="notif-head-title">Notifications</span><button class="notif-mark-all" onclick="markAllRead()">Mark all read</button></div><div class="notif-list" id="notifList"><div class="notif-empty">🔔 No notifications</div></div></div></div><div class="topbar-avatar" id="tAvatar">?</div></div>
+  </div>
+
+  <div class="page-content">
+    <div class="page-inner">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Activity Log</div>
+          <div class="page-subtitle">Full history of all actions</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm" onclick="loadActivity()">
+            <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <button class="filter-chip active" onclick="setFilter('all',this)">All</button>
+        <button class="filter-chip" onclick="setFilter('file',this)">Files</button>
+        <button class="filter-chip" onclick="setFilter('bot',this)">Bots</button>
+        <button class="filter-chip" onclick="setFilter('user',this)">User</button>
+        <button class="filter-chip" onclick="setFilter('system',this)">System</button>
+      </div>
+
+      <div class="card">
+        <div id="activityList">
+          <div class="empty-state">
+            <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <div class="empty-title">Loading activity…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+<script>
+const SID = () => localStorage.getItem("nsid") || "";
+const api = (p,o={}) => fetch(p,{headers:{"X-Session-Id":SID(),"Content-Type":"application/json",...(o.headers||{})}, ...o});
+const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function openSidebar(){document.getElementById("sidebar").classList.add("open");document.getElementById("sOverlay").classList.add("open");document.body.style.overflow="hidden";}
+function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sOverlay").classList.remove("open");document.body.style.overflow="";}
+
+// ── Clear Firebase IndexedDB on logout ──────────────────────
+// signOut alone leaves stale OAuth state in IndexedDB → next
+// signInWithPopup silently fails. Clear all 3 DBs on logout.
+
+async function _clearAllFirebaseState() {
+  // ── Step 1: Clear Firebase IDB by OPENING + CLEARING (not deleteDatabase) ──
+  // deleteDatabase() is BLOCKED when Firebase SDK has the DB open,
+  // so it silently "succeeds" without deleting anything. Opening directly
+  // and clearing records works even with open connections.
+  await new Promise(resolve => {
+    try {
+      const req = indexedDB.open("firebaseLocalStorageDb");
+      req.onerror = () => resolve();
+      req.onsuccess = () => {
+        const db = req.result;
+        try {
+          const stores = Array.from(db.objectStoreNames);
+          if (!stores.length) { db.close(); resolve(); return; }
+          const tx = db.transaction(stores, "readwrite");
+          stores.forEach(s => { try { tx.objectStore(s).clear(); } catch(_) {} });
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror   = () => { db.close(); resolve(); };
+        } catch(_) { try { db.close(); } catch(_){} resolve(); }
+      };
+    } catch(_) { resolve(); }
+  });
+
+  // ── Step 2: Delete the other Firebase DBs (no open connections on these) ──
+  await Promise.all([
+    "firebase-heartbeat-database",
+    "firebase-installations-database"
+  ].map(name => new Promise(res => {
+    try { const r = indexedDB.deleteDatabase(name); r.onsuccess = r.onerror = r.onblocked = () => res(); }
+    catch(_) { res(); }
+  })));
+
+  // ── Step 3: Wipe firebase: keys from sessionStorage ──────────────────────
+  try {
+    Object.keys(sessionStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) sessionStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 4: Wipe firebase: keys from localStorage ────────────────────────
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) localStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 5: Expire Firebase cookies ──────────────────────────────────────
+  try {
+    const host = window.location.hostname;
+    const domains = [host, "." + host, ""];
+    const paths   = ["/", ""];
+    document.cookie.split(";").forEach(raw => {
+      const name = raw.trim().split("=")[0].trim();
+      if (!name) return;
+      const isFB = name.startsWith("firebase:") || name.startsWith("firebaseui:")
+                || name.startsWith("__Secure-firebase") || name.includes("firebase");
+      if (!isFB) return;
+      domains.forEach(d => paths.forEach(p => {
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;SameSite=None;Secure" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+      }));
+    });
+  } catch(_) {}
+}
+
+async function doLogout() {
+  try {
+    // Step 1: Firebase signOut (CRITICAL!)
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const app = initializeApp({apiKey:"AIzaSyATmS9Zy8YIxXf1qYpUB6wIw45i7K-3YVU",authDomain:"hosting-website-bot-v9-v1.firebaseapp.com",projectId:"hosting-website-bot-v9-v1"});
+    const auth = getAuth(app);
+    await signOut(auth);
+    
+    // Step 2: Backend session invalidation
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-Session-Id": localStorage.getItem("nsid") || "" }
+    }).catch(() => {});
+
+    // Step 3: Clear ALL Firebase persistent state
+    await _clearAllFirebaseState().catch(() => {});
+
+    // Step 4: Wipe all local state
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Step 5: Navigate with cache-buster
+    window.location.href = "/?" + Date.now();
+  } catch(err) {
+    console.error('Logout error:', err);
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = "/?" + Date.now();
+  }
+}
+
+const AVATAR_COLORS=["#5B6EF7","#8B5CF6","#EC4899","#F59E0B","#10B981","#38BDF8","#EF4444","#6366F1","#14B8A6","#F97316"];
+function avatarColor(n){const c=(n||"?").charCodeAt(0);return AVATAR_COLORS[c%AVATAR_COLORS.length];}
+
+let allActivity = [], currentFilter = "all";
+
+// Map action types to categories
+const ACTION_CATEGORY = {login:"user",logout:"user",upload:"file",delete:"file",rename:"file",edit:"file",start:"bot",stop:"bot",pip:"file",malware:"system",ban:"system",create:"file"};
+const ACTION_ICON = {
+  login:`<svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`,
+  logout:`<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+  upload:`<svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>`,
+  delete:`<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
+  start:`<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  stop:`<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
+  rename:`<svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`,
+  edit:`<svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`,
+  pip:`<svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`,
+  create:`<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>`,
+  malware:`<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  ban:`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
+};
+const ACTION_STYLE = {
+  login:{bg:"rgba(91,110,247,0.12)",color:"#818CF8"},
+  logout:{bg:"rgba(83,90,130,0.12)",color:"#535A82"},
+  upload:{bg:"rgba(56,189,248,0.12)",color:"#38BDF8"},
+  delete:{bg:"rgba(239,68,68,0.12)",color:"#EF4444"},
+  start:{bg:"rgba(34,197,94,0.12)",color:"#22C55E"},
+  stop:{bg:"rgba(245,158,11,0.12)",color:"#F59E0B"},
+  rename:{bg:"rgba(167,139,250,0.12)",color:"#A78BFA"},
+  edit:{bg:"rgba(91,110,247,0.12)",color:"#818CF8"},
+  pip:{bg:"rgba(20,184,166,0.12)",color:"#14B8A6"},
+  create:{bg:"rgba(56,189,248,0.12)",color:"#38BDF8"},
+  malware:{bg:"rgba(239,68,68,0.12)",color:"#EF4444"},
+  ban:{bg:"rgba(239,68,68,0.12)",color:"#EF4444"},
+};
+const CATEGORY_LABEL = {user:"User",file:"File",bot:"Bot",system:"System"};
+
+function setFilter(f, el){
+  currentFilter = f;
+  document.querySelectorAll(".filter-chip").forEach(c=>c.classList.remove("active"));
+  el.classList.add("active");
+  renderActivity();
+}
+
+function fmtDate(iso){
+  try{const d=new Date(iso);return d.toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "—";}
+}
+function fmtDay(iso){
+  try{
+    const d=new Date(iso);const today=new Date();const yest=new Date();yest.setDate(today.getDate()-1);
+    if(d.toDateString()===today.toDateString())return "Today";
+    if(d.toDateString()===yest.toDateString())return "Yesterday";
+    return d.toLocaleString("en-IN",{timeZone:"Asia/Kolkata",weekday:"long",month:"long",day:"numeric"});
+  }catch{return "";}
+}
+
+function renderActivity(){
+  const el = document.getElementById("activityList");
+  let items = allActivity;
+  if(currentFilter !== "all"){
+    items = allActivity.filter(a => (ACTION_CATEGORY[a.action]||"system") === currentFilter);
+  }
+  if(!items.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="empty-title">No activity found</div><div class="empty-subtitle">No entries match the selected filter.</div></div>`;
+    return;
+  }
+  // Group by day
+  let html = "";
+  let lastDay = "";
+  items.forEach(a => {
+    const day = fmtDay(a.time);
+    if(day !== lastDay){
+      html += `<div class="day-separator">${esc(day)}</div>`;
+      lastDay = day;
+    }
+    const style = ACTION_STYLE[a.action]||{bg:"rgba(91,110,247,0.1)",color:"#818CF8"};
+    const icon = ACTION_ICON[a.action]||ACTION_ICON.edit;
+    const cat = ACTION_CATEGORY[a.action]||"system";
+    html += `<div class="act-row">
+      <div class="act-ico" style="background:${style.bg};color:${style.color}">${icon}</div>
+      <div class="act-body">
+        <div class="act-msg">${esc(a.msg||"Unknown action")}</div>
+        <div class="act-category">${CATEGORY_LABEL[cat]}</div>
+      </div>
+      <div class="act-time">${fmtDate(a.time)}</div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+async function loadActivity(){
+  document.getElementById("activityList").innerHTML=`<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="animation:spin .7s linear infinite"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div><div class="empty-title">Loading…</div></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+  try{
+    const r=await api("/api/activity");const d=await r.json();
+    if(d.success){allActivity=d.activity||[];renderActivity();}
+    else{document.getElementById("activityList").innerHTML=`<div class="empty-state"><div class="empty-title">Failed to load</div></div>`;}
+  }catch(e){document.getElementById("activityList").innerHTML=`<div class="empty-state"><div class="empty-title">Network error</div></div>`;}
+}
+
+function toast(msg,type="info"){
+  const c=document.getElementById("toastStack");const el=document.createElement("div");
+  el.className=`toast toast-${type}`;el.innerHTML=`<span>${esc(msg)}</span>`;
+  c.appendChild(el);setTimeout(()=>{el.classList.add("toast-out");el.addEventListener("animationend",()=>el.remove(),{once:true});},4000);
+}
+
+async function init(){
+  if(!SID()){window.location.href="/";return;}
+  try{
+    const r=await api("/api/auth/me");if(!r.ok){window.location.href="/";return;}
+    const d=await r.json();const u=d.user;
+    const name=u.name||u.email||"User";
+    document.getElementById("sName").textContent=name;
+    document.getElementById("sRole").textContent=u.role;
+    const letter=name[0].toUpperCase();
+    const color=avatarColor(name);
+    document.querySelectorAll(".sidebar-avatar,.topbar-avatar").forEach(el=>{el.textContent=letter;el.style.background=color;});
+    if(["admin","owner"].includes(u.role))document.getElementById("adminNavItem").style.display="block";
+  }catch(e){window.location.href="/";}
+  loadActivity();
+}
+init();
+</script>
+</body>
+</html>

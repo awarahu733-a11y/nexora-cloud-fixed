@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><meta name="apple-mobile-web-app-title" content="Nexora"/><meta name="theme-color" content="#5B6EF7"/><link rel="manifest" href="/manifest.json"/>
+<title>File Manager — Nexora Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include '_shell.html' %}
+<style>
+.upload-zone{border:2px dashed rgba(91,110,247,0.22);border-radius:var(--radius-lg);padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(91,110,247,0.025);position:relative;}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--primary);background:rgba(91,110,247,0.07);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.uz-icon{width:52px;height:52px;background:var(--primary-soft);border:1px solid var(--primary-border);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+.uz-icon svg{width:24px;height:24px;stroke:#818CF8;fill:none;stroke-width:1.8;}
+.uz-title{font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:6px;}
+.uz-sub{font-size:13px;color:var(--text-secondary);margin-bottom:14px;}
+.ext-chips{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;}
+.ext-chip{font-size:10.5px;font-weight:600;font-family:'JetBrains Mono',monospace;padding:2px 8px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:5px;color:var(--text-secondary);}
+.up-progress{display:none;margin:14px 0 0;padding:12px 14px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:10px;animation:fadeSlideIn .25s ease both;}
+.up-progress-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.up-progress-label{font-size:12px;font-weight:600;color:var(--text-primary);}
+.up-progress-pct{font-size:12px;font-weight:700;color:var(--primary);font-family:'JetBrains Mono',monospace;}
+.up-prog-track{height:6px;background:var(--bg-base);border-radius:100px;overflow:hidden;}
+.up-prog-bar{height:100%;background:linear-gradient(90deg,#5B6EF7,#8B5CF6);border-radius:100px;transition:width .2s ease;width:0%;}
+.file-ext-badge{font-size:9.5px;font-weight:700;font-family:'JetBrains Mono',monospace;padding:2px 6px;border-radius:4px;text-transform:uppercase;flex-shrink:0;}
+.ext-py{background:rgba(56,189,248,0.12);color:var(--info);}
+.ext-js,.ext-ts{background:rgba(245,158,11,0.1);color:#FBBF24;}
+.ext-json{background:rgba(34,197,94,0.1);color:var(--success);}
+.ext-sh,.ext-yaml,.ext-yml{background:rgba(167,139,250,0.1);color:#A78BFA;}
+.ext-txt,.ext-md,.ext-env{background:var(--bg-active);color:var(--text-muted);}
+.search-wrap{position:relative;}
+.search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;}
+.search-ico svg{width:15px;height:15px;stroke:var(--text-muted);fill:none;stroke-width:2;}
+.search-input{width:100%;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary);font-family:inherit;font-size:13.5px;padding:9px 13px 9px 38px;outline:none;transition:all .2s;}
+.search-input:focus{border-color:var(--primary);box-shadow:var(--primary-glow);}
+.search-input::placeholder{color:var(--text-disabled);}
+/* ─── FILE TAGS/LABELS ─── */
+.file-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.file-tag-wrap{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;}
+.tag-add-btn{padding:2px 6px;border-radius:5px;border:1px dashed var(--border-default);background:transparent;color:var(--text-muted);font-size:10px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.tag-add-btn:hover{border-color:var(--primary);color:var(--primary);}
+.tag-production{background:rgba(239,68,68,.15);color:#EF4444;border:1px solid rgba(239,68,68,.3);}
+.tag-testing{background:rgba(245,158,11,.12);color:#F59E0B;border:1px solid rgba(245,158,11,.3);}
+.tag-stable{background:rgba(16,185,129,.12);color:#10B981;border:1px solid rgba(16,185,129,.3);}
+.tag-dev{background:rgba(91,110,247,.12);color:#818CF8;border:1px solid rgba(91,110,247,.3);}
+.tag-paused{background:rgba(107,114,128,.12);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);}
+/* Tags modal */
+.tags-option{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;transition:background .15s;}
+.tags-option:hover{background:var(--bg-elevated);}
+.tags-option input[type=checkbox]{accent-color:var(--primary);}
+/* File size warning */
+.upload-size-warn{margin-top:10px;padding:10px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:9px;font-size:12.5px;color:#F59E0B;display:none;}
+.upload-size-warn.show{display:block;}
+
+.file-name-cell{display:flex;align-items:center;gap:9px;}
+.file-name-txt{font-weight:600;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text-primary);}
+.file-size-txt{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary);}
+.row-actions{display:flex;gap:6px;align-items:center;}
+/* Optimistic row state */
+.file-row-deleting{opacity:.4;pointer-events:none;}
+.file-row-updating td .file-name-txt{color:var(--primary);}
+/* Mobile cards */
+.file-card{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border-subtle);transition:all .15s;}
+.file-card:last-child{border-bottom:none;}
+.file-card:hover{background:rgba(91,110,247,0.025);}
+.file-card.deleting{opacity:.4;pointer-events:none;}
+.file-card-main{flex:1;min-width:0;}
+.file-card-name{font-size:13.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-card-meta{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;}
+.file-card-btn{background:var(--bg-elevated);border:1px solid var(--border-default);cursor:pointer;color:var(--text-secondary);padding:9px 11px;border-radius:9px;display:flex;align-items:center;justify-content:center;transition:all .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0;}
+.file-card-btn:hover{background:var(--primary-soft);color:var(--primary);border-color:var(--primary-border);}
+.file-card-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.5;}
+.action-sheet-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:800;backdrop-filter:blur(3px);}
+.action-sheet-overlay.open{display:flex;align-items:flex-end;}
+.action-sheet{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:20px 20px 0 0;width:100%;padding:8px 0 max(16px,env(safe-area-inset-bottom));animation:sheet-in .28s var(--ease-spring) both;}
+@keyframes sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.action-sheet-header{padding:16px 20px 10px;border-bottom:1px solid var(--border-subtle);margin-bottom:4px;}
+.action-sheet-title{font-size:14px;font-weight:700;color:var(--text-primary);}
+.action-sheet-sub{font-size:11.5px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary);margin-top:2px;}
+.action-sheet-item{display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent;}
+.action-sheet-item:active{background:var(--bg-elevated);}
+.action-sheet-item svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;}
+.action-sheet-item span{font-size:14px;font-weight:500;}
+.action-sheet-item.danger{color:var(--danger);}
+.action-sheet-item.cancel{color:var(--text-secondary);border-top:1px solid var(--border-subtle);margin-top:4px;}
+/* Type selector for create file */
+.type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px;}
+.type-btn{padding:10px 6px;border-radius:9px;border:1px solid var(--border-default);background:var(--bg-elevated);cursor:pointer;text-align:center;transition:all .15s;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--text-secondary);}
+.type-btn:hover,.type-btn.selected{border-color:var(--primary);background:var(--primary-soft);color:#818CF8;}
+@media(max-width:768px){.desktop-only{display:none!important;}.mobile-card-list{display:block!important;}.upload-zone{padding:24px 16px;}.type-grid{grid-template-columns:repeat(3,1fr);}
+  .folder-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;}
+  .folder-chip{flex-shrink:0;}
+}
+@media(min-width:769px){.mobile-only{display:none!important;}.mobile-card-list{display:none!important;}}
+/* Folder styles */
+.folder-bar{display:flex;align-items:center;gap:8px;padding:10px 0;flex-wrap:wrap;}
+.folder-chip{display:flex;align-items:center;gap:7px;padding:7px 12px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-primary);transition:all .15s;position:relative;}
+.folder-chip:hover{border-color:var(--primary);background:var(--primary-soft);color:#818CF8;}
+.folder-chip svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;color:#F59E0B;}
+.folder-chip-del{display:none;position:absolute;top:-6px;right:-6px;width:18px;height:18px;background:#EF4444;border-radius:50%;align-items:center;justify-content:center;cursor:pointer;border:2px solid var(--bg-base);}
+.folder-chip:hover .folder-chip-del{display:flex;}
+.folder-chip-del svg{width:9px;height:9px;stroke:white;fill:none;stroke-width:3;}
+.folder-chip.active{border-color:var(--primary);background:var(--primary-soft);color:#818CF8;}
+.folder-chip-new{display:flex;align-items:center;gap:6px;padding:7px 12px;background:transparent;border:1px dashed var(--border-default);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);transition:all .15s;}
+.folder-chip-new:hover{border-color:var(--primary);color:#818CF8;}
+.folder-chip-new svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);margin-bottom:8px;}
+.breadcrumb a{color:var(--primary);cursor:pointer;text-decoration:none;}
+.breadcrumb a:hover{text-decoration:underline;}
+.breadcrumb-sep{color:var(--text-muted);}
+.file-folder-badge{font-size:10px;padding:2px 6px;background:rgba(245,158,11,0.1);color:#F59E0B;border-radius:4px;font-weight:600;margin-left:6px;}
+</style>
+</head>
+<script>
+(function(){
+  var sid=localStorage.getItem('nsid');
+  if(!sid){window.location.replace('/');return;}
+  document.documentElement.style.visibility='hidden';
+  fetch('/api/auth/me',{headers:{'X-Session-Id':sid}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.success){document.documentElement.style.visibility='';}
+      else{localStorage.removeItem('nsid');window.location.replace('/');}
+    })
+    .catch(function(){document.documentElement.style.visibility='';});
+})();
+</script>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="/dashboard">
+      <div class="sidebar-brand-icon"><svg viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div>
+      <div class="sidebar-brand-text">Nexora<span>Cloud</span></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="/dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-item active" href="/files"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+      <a class="nav-item" href="/bots"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bot Manager</a>
+      <a class="nav-item" href="/editor"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Code Editor</a>
+      <div class="nav-section-label" style="margin-top:8px">Workspace</div>
+      <a class="nav-item" href="/activity"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity Log</a>
+      <a class="nav-item" href="/support"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Support</a>
+      <a class="nav-item" href="/subusers"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Sub-Users</a>
+      <a class="nav-item" href="/settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+      <div id="adminNavItem" style="display:none">
+        <div class="nav-section-label" style="margin-top:8px">Admin</div>
+        <a class="nav-item" href="/admin"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Admin Panel</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" onclick="window.location.href='/settings'">
+        <div class="sidebar-avatar" id="sAvatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-name" id="sName">Loading…</div><div class="sidebar-user-role" id="sRole">—</div></div>
+        <button class="sidebar-logout-btn" onclick="event.stopPropagation();doLogout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sOverlay" onclick="closeSidebar()"></div>
+  <div class="topbar" id="topbar">
+    <button class="topbar-menu-btn" onclick="openSidebar()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-brand">Nexora<span>Cloud</span></span>
+    <div class="topbar-right" style="display:flex;align-items:center;gap:8px"><button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Light Mode"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button><div style="position:relative"><button class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" title="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notif-badge" id="notifBadge" style="display:none">0</span></button><div class="notif-dropdown" id="notifDropdown"><div class="notif-head"><span class="notif-head-title">Notifications</span><button class="notif-mark-all" onclick="markAllRead()">Mark all read</button></div><div class="notif-list" id="notifList"><div class="notif-empty">🔔 No notifications</div></div></div></div><div class="topbar-avatar" id="tAvatar">?</div></div>
+  </div>
+
+  <div class="page-content">
+    <div class="page-inner">
+      <div class="page-header">
+        <div>
+          <div class="page-title">File Manager</div>
+          <div class="page-subtitle">Upload, create, and manage your files</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary desktop-only" onclick="syncFiles()" id="syncBtn">
+            <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Sync
+          </button>
+          <button class="btn btn-secondary" onclick="openModal('createFolderModal')">
+            <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+            New Folder
+          </button>
+          <button class="btn btn-secondary" onclick="openCreateModal()">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+            New File
+          </button>
+        </div>
+      </div>
+
+      <!-- Multi-Select Action Bar -->
+      <div id="multiBar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;background:var(--bg-surface);border:1px solid rgba(91,110,247,.3);border-radius:12px;margin-bottom:16px;animation:slideUp .2s ease both">
+        <span id="multiBarCount" style="font-size:13px;font-weight:700;color:#818CF8">0 selected</span>
+        <div style="flex:1;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm" style="background:rgba(239,68,68,.12);color:#EF4444;border:1px solid rgba(239,68,68,.25)" onclick="multiDelete()">
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg> Delete
+          </button>
+          <button class="btn btn-sm" style="background:rgba(239,68,68,.12);color:#EF4444;border:1px solid rgba(239,68,68,.25)" onclick="multiTag('production')">🔴 Tag Production</button>
+          <button class="btn btn-sm" style="background:rgba(245,158,11,.12);color:#F59E0B;border:1px solid rgba(245,158,11,.25)" onclick="multiTag('testing')">🟡 Tag Testing</button>
+          <button class="btn btn-sm" style="background:rgba(16,185,129,.12);color:#10B981;border:1px solid rgba(16,185,129,.25)" onclick="multiTag('stable')">🟢 Tag Stable</button>
+          <button class="btn btn-sm" style="background:rgba(91,110,247,.12);color:#818CF8;border:1px solid rgba(91,110,247,.25)" onclick="multiTag('dev')">🔵 Tag Dev</button>
+        </div>
+        <button onclick="clearMultiSelect()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;border-radius:6px;display:flex">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Folders Row -->
+      <div id="folderSection" style="display:none;margin-bottom:16px;">
+        <div class="card">
+          <div class="card-body" style="padding:14px 20px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);margin-bottom:8px">📁 Directories</div>
+            <div class="folder-bar" id="folderBar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Zone (ONLY ONE — no secondary upload button) -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body" style="padding:20px">
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="fileUploadInput" onchange="handleFileUpload(this.files[0])"/>
+            <div class="uz-icon"><svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
+            <div class="uz-title">Drop file here or click to browse</div>
+            <div class="uz-sub">Upload any file. Only <b style="color:#38BDF8">.py</b> and <b style="color:#FBBF24">.js</b> files can be run as bots</div>
+            <div id="uzFolderHint" style="display:none;margin-top:8px;padding:4px 12px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);border-radius:20px;font-size:11.5px;font-weight:600;color:#818CF8;display:inline-flex;align-items:center;gap:5px;">
+              <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Uploading to: <span id="uzFolderName">Root</span>
+            </div>
+            <div class="ext-chips">
+              <span class="ext-chip">.py</span><span class="ext-chip">.js</span><span class="ext-chip">.ts</span><span class="ext-chip">.json</span><span class="ext-chip">.yaml</span><span class="ext-chip">.sh</span><span class="ext-chip">.txt</span><span class="ext-chip">.env</span>
+            </div>
+          </div>
+          <div class="upload-size-warn" id="uploadSizeWarn">
+              ⚠️ File is larger than 5MB — it may take longer to upload or may fail.
+            </div>
+            <div class="up-progress" id="upProgress">
+            <div class="up-progress-row">
+              <span class="up-progress-label">⬆ Uploading file…</span>
+              <span class="up-progress-pct" id="upPct">0%</span>
+            </div>
+            <div class="up-prog-track"><div class="up-prog-bar" id="upBar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- File List -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" style="background:rgba(91,110,247,0.15)"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+            <div>
+              <div class="card-title">Your Files</div>
+              <div class="card-subtitle" id="fileCountLabel">Loading…</div>
+            </div>
+          </div>
+          <div style="flex:1;max-width:280px;">
+            <div class="search-wrap">
+              <div class="search-ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+              <input class="search-input" id="searchInput" placeholder="Search files…" oninput="filterFiles(this.value)"/>
+            </div>
+          </div>
+        </div>
+        <!-- Desktop table -->
+        <div id="fileTableWrap" class="desktop-only">
+          <div class="empty-state" id="emptyStateDesk">
+            <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div class="empty-title">No files yet</div>
+            <div class="empty-subtitle">Upload your first file or create a new one.</div>
+          </div>
+          <div class="table-wrap" id="tableWrap" style="display:none">
+            <table>
+              <thead><tr><th style="width:28px"><input type="checkbox" style="accent-color:var(--primary)" onclick="selectAllFiles()" title="Select all"/></th><th>File</th><th>Size</th><th>Status</th><th>Uploaded</th><th style="text-align:right">Actions</th></tr></thead>
+              <tbody id="fileTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Mobile cards -->
+        <div id="mobileFileList" class="mobile-card-list">
+          <div class="empty-state" id="emptyStateMobile">
+            <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div class="empty-title">No files yet</div>
+            <div class="empty-subtitle">Tap to upload or create a new file.</div>
+          </div>
+          <div id="mobileCardBody"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create File Modal -->
+<!-- Create Folder Modal -->
+<div class="modal-overlay" id="createFolderModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div><div class="modal-title">📁 New Folder</div><div class="modal-subtitle">Create a directory to organize your files</div></div>
+      <button class="modal-close" onclick="closeModal('createFolderModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Folder Name</label>
+        <input class="form-input" id="newFolderName" placeholder="e.g. my-bots, scripts" onkeydown="if(event.key==='Enter')confirmCreateFolder()"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('createFolderModal')">Cancel</button>
+      <button class="btn btn-primary" id="createFolderBtn" onclick="confirmCreateFolder()">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        Create Folder
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Move to Folder Modal -->
+<div class="modal-overlay" id="moveFolderModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div><div class="modal-title">Move File</div><div class="modal-subtitle" id="moveFolderSub">Select destination folder</div></div>
+      <button class="modal-close" onclick="closeModal('moveFolderModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="moveFolderBody" style="padding:8px 16px"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('moveFolderModal')">Cancel</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="createFileModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Create New File</div><div class="modal-subtitle" id="createModalSub">Choose type and name your file</div></div>
+      <button class="modal-close" onclick="closeModal('createFileModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">File Type</label>
+        <div class="type-grid" id="typeGrid">
+          <div class="type-btn selected" onclick="selectType('.py',this)">.py</div>
+          <div class="type-btn" onclick="selectType('.js',this)">.js</div>
+          <div class="type-btn" onclick="selectType('.ts',this)">.ts</div>
+          <div class="type-btn" onclick="selectType('.json',this)">.json</div>
+          <div class="type-btn" onclick="selectType('.sh',this)">.sh</div>
+          <div class="type-btn" onclick="selectType('.yaml',this)">.yaml</div>
+          <div class="type-btn" onclick="selectType('.txt',this)">.txt</div>
+          <div class="type-btn" onclick="selectType('.env',this)">.env</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">File Name</label>
+        <input class="form-input" id="newFileName" placeholder="my_bot" onkeydown="if(event.key==='Enter')confirmCreate()"/>
+        <div class="form-hint" id="newFilePreview">Preview: my_bot.py</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('createFileModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmCreate()" id="createFileBtn">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        Create File
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-body" style="text-align:center;padding:32px">
+      <div style="width:56px;height:56px;background:var(--danger-soft);border:1px solid var(--danger-border);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </div>
+      <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:8px">Delete this file?</div>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.6">This action is permanent and cannot be undone.</div>
+      <div id="deleteFileName" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:8px;padding:10px;margin:14px 0;color:var(--text-primary);word-break:break-all">—</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('deleteModal')" style="flex:1">Cancel</button>
+      <button class="btn btn-danger" id="confirmDelBtn" onclick="confirmDelete()" style="flex:1.5">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal-overlay" id="renameModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Rename File</div></div>
+      <button class="modal-close" onclick="closeModal('renameModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">New File Name</label>
+        <input class="form-input" id="renameInput" placeholder="script.py" onkeydown="if(event.key==='Enter')confirmRename()"/>
+        <div class="form-hint">Include the file extension (e.g. script.py)</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('renameModal')">Cancel</button>
+      <button class="btn btn-primary" id="confirmRenameBtn" onclick="confirmRename()">Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- pip Modal -->
+<div class="modal-overlay" id="pipModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Install Package</div><div class="modal-subtitle" id="pipFileName">—</div></div>
+      <button class="modal-close" onclick="closeModal('pipModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Package Name</label>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="pipInput" placeholder="e.g. requests, numpy, telebot" onkeydown="if(event.key==='Enter')runPipInstall()" style="flex:1"/>
+          <button class="btn btn-primary" id="pipInstallBtn" onclick="runPipInstall()">Install</button>
+        </div>
+      </div>
+      <div id="pipOutput" style="display:none;background:var(--bg-base);border:1px solid var(--border-default);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94A3D4;max-height:180px;overflow-y:auto;white-space:pre-wrap;"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('pipModal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Mobile Action Sheet -->
+<div class="action-sheet-overlay" id="actionSheet" onclick="closeActionSheet()">
+  <div class="action-sheet" onclick="event.stopPropagation()">
+    <div class="action-sheet-header">
+      <div class="action-sheet-title" id="asTitle">File Options</div>
+      <div class="action-sheet-sub" id="asName">—</div>
+    </div>
+    <div id="asItems"></div>
+    <div class="action-sheet-item cancel" onclick="closeActionSheet()">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <span>Cancel</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- Tags Modal -->
+<div class="modal-overlay" id="tagsModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title" id="tagsModalTitle">Edit Tags</div>
+      <button class="modal-close" onclick="document.getElementById('tagsModal').classList.remove('open')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" style="padding:16px">
+      <div id="tagsModalContent"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('tagsModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveFileTags()">Save Tags</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+const SID = () => localStorage.getItem("nsid") || "";
+const api = (p,o={}) => fetch(p,{headers:{"X-Session-Id":SID(),"Content-Type":"application/json",...(o.headers||{})}, ...o});
+const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmtDate = iso => { try{const d=new Date(iso);return d.toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "—";} };
+const AVATAR_COLORS=["#5B6EF7","#8B5CF6","#EC4899","#F59E0B","#10B981","#38BDF8","#EF4444","#6366F1","#14B8A6","#F97316"];
+function avatarColor(n){const c=(n||"?").charCodeAt(0);return AVATAR_COLORS[c%AVATAR_COLORS.length];}
+function openSidebar(){document.getElementById("sidebar").classList.add("open");document.getElementById("sOverlay").classList.add("open");document.body.style.overflow="hidden";}
+function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sOverlay").classList.remove("open");document.body.style.overflow="";}
+function openModal(id){document.getElementById(id).classList.add("open");}
+function closeModal(id){document.getElementById(id).classList.remove("open");}
+document.querySelectorAll(".modal-overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("open");}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){document.querySelectorAll(".modal-overlay.open").forEach(m=>m.classList.remove("open"));closeActionSheet();}});
+
+// ── Clear Firebase IndexedDB on logout ──────────────────────
+// signOut alone leaves stale OAuth state in IndexedDB → next
+// signInWithPopup silently fails. Clear all 3 DBs on logout.
+
+async function _clearAllFirebaseState() {
+  // ── Step 1: Clear Firebase IDB by OPENING + CLEARING (not deleteDatabase) ──
+  // deleteDatabase() is BLOCKED when Firebase SDK has the DB open,
+  // so it silently "succeeds" without deleting anything. Opening directly
+  // and clearing records works even with open connections.
+  await new Promise(resolve => {
+    try {
+      const req = indexedDB.open("firebaseLocalStorageDb");
+      req.onerror = () => resolve();
+      req.onsuccess = () => {
+        const db = req.result;
+        try {
+          const stores = Array.from(db.objectStoreNames);
+          if (!stores.length) { db.close(); resolve(); return; }
+          const tx = db.transaction(stores, "readwrite");
+          stores.forEach(s => { try { tx.objectStore(s).clear(); } catch(_) {} });
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror   = () => { db.close(); resolve(); };
+        } catch(_) { try { db.close(); } catch(_){} resolve(); }
+      };
+    } catch(_) { resolve(); }
+  });
+
+  // ── Step 2: Delete the other Firebase DBs (no open connections on these) ──
+  await Promise.all([
+    "firebase-heartbeat-database",
+    "firebase-installations-database"
+  ].map(name => new Promise(res => {
+    try { const r = indexedDB.deleteDatabase(name); r.onsuccess = r.onerror = r.onblocked = () => res(); }
+    catch(_) { res(); }
+  })));
+
+  // ── Step 3: Wipe firebase: keys from sessionStorage ──────────────────────
+  try {
+    Object.keys(sessionStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) sessionStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 4: Wipe firebase: keys from localStorage ────────────────────────
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) localStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 5: Expire Firebase cookies ──────────────────────────────────────
+  try {
+    const host = window.location.hostname;
+    const domains = [host, "." + host, ""];
+    const paths   = ["/", ""];
+    document.cookie.split(";").forEach(raw => {
+      const name = raw.trim().split("=")[0].trim();
+      if (!name) return;
+      const isFB = name.startsWith("firebase:") || name.startsWith("firebaseui:")
+                || name.startsWith("__Secure-firebase") || name.includes("firebase");
+      if (!isFB) return;
+      domains.forEach(d => paths.forEach(p => {
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;SameSite=None;Secure" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+      }));
+    });
+  } catch(_) {}
+}
+
+async function doLogout() {
+  try {
+    // Step 1: Firebase signOut (CRITICAL!)
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const app = initializeApp({apiKey:"AIzaSyATmS9Zy8YIxXf1qYpUB6wIw45i7K-3YVU",authDomain:"hosting-website-bot-v9-v1.firebaseapp.com",projectId:"hosting-website-bot-v9-v1"});
+    const auth = getAuth(app);
+    await signOut(auth);
+    
+    // Step 2: Backend session invalidation
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-Session-Id": localStorage.getItem("nsid") || "" }
+    }).catch(() => {});
+
+    // Step 3: Clear ALL Firebase persistent state
+    await _clearAllFirebaseState().catch(() => {});
+
+    // Step 4: Wipe all local state
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Step 5: Navigate with cache-buster
+    window.location.href = "/?" + Date.now();
+  } catch(err) {
+    console.error('Logout error:', err);
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = "/?" + Date.now();
+  }
+}
+
+let allFiles=[], allFolders=[], currentFolderId=null, deleteFileId=null, renameFileId=null, pipFileId=null, selectedExt=".py", moveFileId=null;
+const pendingDeletes=new Set(); // track file IDs being deleted so loadFiles() skips them
+
+async function loadFiles(){
+  try{
+    const r=await api("/api/files/list");const d=await r.json();
+    // Filter out any files with pending deletes so they don't reappear
+    allFiles=(d.files||[]).filter(f=>!pendingDeletes.has(f.id));
+    allFolders=d.folders||[];
+    renderFolders();
+    renderFiles(getFilteredFiles());
+  }catch(e){toast("Failed to load files","error");}
+}
+
+function getFilteredFiles(){
+  return allFiles.filter(f=>(f.folder_id||null)===currentFolderId);
+}
+
+function renderFolders(){
+  const section=document.getElementById("folderSection");
+  const bar=document.getElementById("folderBar");
+  if(!allFolders.length){section.style.display="none";return;}
+  section.style.display="block";
+  // Count files per folder for badges
+  const rootCount=allFiles.filter(f=>!f.folder_id||f.folder_id===null).length;
+  const folderCounts={};
+  allFiles.forEach(f=>{if(f.folder_id)folderCounts[f.folder_id]=(folderCounts[f.folder_id]||0)+1;});
+  bar.innerHTML=`
+    <div class="folder-chip ${!currentFolderId?'active':''}" onclick="setFolder(null)">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Root
+      ${rootCount>0?`<span style="background:rgba(99,102,241,.18);color:#818CF8;border-radius:100px;font-size:10px;font-weight:700;padding:1px 6px;min-width:16px;text-align:center;line-height:16px;">${rootCount}</span>`:''}
+    </div>
+    ${allFolders.map(fld=>{
+      const cnt=folderCounts[fld.id]||0;
+      return `
+      <div class="folder-chip ${currentFolderId===fld.id?'active':''}" onclick="setFolder('${fld.id}')">
+        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        ${esc(fld.name)}
+        ${cnt>0?`<span style="background:rgba(245,158,11,.18);color:#F59E0B;border-radius:100px;font-size:10px;font-weight:700;padding:1px 6px;min-width:16px;text-align:center;line-height:16px;">${cnt}</span>`:''}
+        <span class="folder-chip-del" onclick="event.stopPropagation();deleteFolder('${fld.id}','${esc(fld.name)}')">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </span>
+      </div>`;}).join("")}
+    <div class="folder-chip-new" onclick="openModal('createFolderModal')">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Folder
+    </div>
+  `;
+}
+
+function setFolder(folderId){
+  currentFolderId=folderId;
+  // Update upload zone hint
+  const hint=document.getElementById("uzFolderHint");
+  const hintName=document.getElementById("uzFolderName");
+  if(hint&&hintName){
+    if(folderId){
+      const fld=allFolders.find(f=>f.id===folderId);
+      hintName.textContent=fld?fld.name:"Selected Folder";
+      hint.style.display="inline-flex";
+    } else {
+      hint.style.display="none";
+    }
+  }
+  // ✅ Re-render files for selected folder
+  renderFiles(getFilteredFiles());
+  // Update folder chips active state
+  document.querySelectorAll(".folder-chip").forEach(el=>{
+    el.classList.remove("active");
+  });
+  // Re-render folders so active chip updates
+  renderFolders();
+}
+
+function openCreateModal(){
+  // Update subtitle to reflect current folder
+  const sub=document.getElementById("createModalSub");
+  if(sub){
+    if(currentFolderId){
+      const fld=allFolders.find(f=>f.id===currentFolderId);
+      sub.innerHTML=`📁 Will be created in <b style="color:var(--primary)">${fld?fld.name:"folder"}</b>`;
+    } else {
+      sub.textContent="Will be created in Root directory";
+    }
+  }
+  openModal("createFileModal");
+  renderFolders();
+  renderFiles(getFilteredFiles());
+}
+
+async function confirmCreateFolder(){
+  const name=document.getElementById("newFolderName").value.trim();
+  if(!name){toast("Enter a folder name","warning");return;}
+  const btn=document.getElementById("createFolderBtn");btn.disabled=true;
+  try{
+    const r=await api("/api/folders/create",{method:"POST",body:JSON.stringify({name})});
+    const d=await r.json();
+    if(d.success){
+      allFolders.push(d.folder);
+      renderFolders();
+      closeModal("createFolderModal");
+      document.getElementById("newFolderName").value="";
+      toast(`Folder "${name}" created`,"success");
+    }else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+  btn.disabled=false;
+}
+
+async function deleteFolder(folderId, folderName){
+  if(!confirm(`Delete folder "${folderName}"? Files inside will be moved to root.`))return;
+  try{
+    const r=await api(`/api/folders/delete/${folderId}`,{method:"DELETE"});
+    const d=await r.json();
+    if(d.success){
+      allFolders=allFolders.filter(f=>f.id!==folderId);
+      // Move files to root locally
+      allFiles=allFiles.map(f=>f.folder_id===folderId?{...f,folder_id:null}:f);
+      if(currentFolderId===folderId)currentFolderId=null;
+      renderFolders();
+      renderFiles(getFilteredFiles());
+      toast("Folder deleted","success");
+    }else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+}
+
+function openMoveFile(fileId, fileName){
+  moveFileId=fileId;
+  document.getElementById("moveFolderSub").textContent=`Moving: ${fileName}`;
+  const file=allFiles.find(f=>f.id===fileId);
+  const curFolder=file?file.folder_id:null;
+  const items=[
+    `<div class="action-sheet-item" onclick="doMoveFile(null)"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>📁 Root (no folder)</span>${curFolder===null?'<span style="color:var(--primary);font-size:11px;margin-left:auto">Current</span>':''}</div>`,
+    ...allFolders.map(fld=>`<div class="action-sheet-item" onclick="doMoveFile('${fld.id}')"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span>${esc(fld.name)}</span>${curFolder===fld.id?'<span style="color:var(--primary);font-size:11px;margin-left:auto">Current</span>':''}</div>`)
+  ];
+  document.getElementById("moveFolderBody").innerHTML=items.join("");
+  openModal("moveFolderModal");
+}
+
+async function doMoveFile(folderId){
+  if(!moveFileId)return;
+  closeModal("moveFolderModal");
+  try{
+    const r=await api(`/api/files/move/${moveFileId}`,{method:"POST",body:JSON.stringify({folder_id:folderId})});
+    const d=await r.json();
+    if(d.success){
+      const idx=allFiles.findIndex(f=>f.id===moveFileId);
+      if(idx>=0)allFiles[idx]={...allFiles[idx],folder_id:folderId};
+      renderFiles(getFilteredFiles());
+      toast("File moved","success");
+    }else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+}
+
+
+
+// Type selector
+function selectType(ext, el){
+  selectedExt=ext;
+  document.querySelectorAll(".type-btn").forEach(b=>b.classList.remove("selected"));
+  el.classList.add("selected");
+  updateCreatePreview();
+}
+function updateCreatePreview(){
+  const name=document.getElementById("newFileName").value||"my_file";
+  document.getElementById("newFilePreview").textContent=`Preview: ${name}${selectedExt}`;
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  document.getElementById("newFileName").addEventListener("input",updateCreatePreview);
+});
+
+async function confirmCreate(){
+  const name=document.getElementById("newFileName").value.trim();
+  if(!name){toast("Enter a file name","warning");return;}
+  const fullName=name.includes(".")?name:(name+selectedExt);
+  const btn=document.getElementById("createFileBtn");
+  btn.disabled=true;
+  btn.innerHTML=`<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2;animation:spin .6s linear infinite"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Creating…`;
+
+  // Optimistic: add placeholder immediately
+  const tempId="_tmp_"+Date.now();
+  const tempFile={id:tempId,name:fullName,type:selectedExt.replace(".",""),size:"0 B",status:"inactive",upload_time:new Date().toISOString(),editable:true,_pending:true,folder_id:currentFolderId||null};
+  allFiles.unshift(tempFile);
+  renderFiles(allFiles);
+  closeModal("createFileModal");
+  document.getElementById("newFileName").value="";
+
+  try{
+    const r=await api("/api/files/create",{method:"POST",body:JSON.stringify({name:fullName,content:"",folder_id:currentFolderId||null})});
+    const d=await r.json();
+    if(d.success){
+      // Replace temp with real
+      const idx=allFiles.findIndex(f=>f.id===tempId);
+      if(idx>=0)allFiles[idx]={...d.file,editable:true};
+      toast(`${fullName} created`,"success");
+      renderFiles(allFiles);
+    }else{
+      // Rollback
+      allFiles=allFiles.filter(f=>f.id!==tempId);
+      renderFiles(allFiles);
+      toast(d.error||"Create failed","error");
+    }
+  }catch(e){
+    allFiles=allFiles.filter(f=>f.id!==tempId);
+    renderFiles(allFiles);
+    toast("Create failed","error");
+  }
+  btn.disabled=false;
+  btn.innerHTML=`<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>Create File`;
+}
+
+function closeActionSheet(){document.getElementById("actionSheet").classList.remove("open");document.body.style.overflow="";}
+function openActionSheet(f){
+  document.getElementById("asTitle").textContent="File Options";
+  document.getElementById("asName").textContent=f.name;
+  let items="";
+  if(f.editable)items+=`<div class="action-sheet-item" onclick="closeActionSheet();copyFileContent('${f.id}','${esc(f.name)}')" ><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy Content</span></div>`;
+  if(f.editable)items+=`<div class="action-sheet-item" onclick="closeActionSheet();openTagsModal('${f.id}','${esc(f.name)}')" ><svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>Edit Tags</span></div>`;
+  if(f.editable)items+=`<div class="action-sheet-item" onclick="closeActionSheet();goToEditor('${f.id}','${esc(f.name)}')" ><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span>Edit Code</span></div>`;
+  items+=`<div class="action-sheet-item" onclick="closeActionSheet();openRename('${f.id}','${esc(f.name)}')"><svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg><span>Rename</span></div>`;
+  if(allFolders.length)items+=`<div class="action-sheet-item" onclick="closeActionSheet();openMoveFile('${f.id}','${esc(f.name)}')"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span>Move to Folder</span></div>`;
+  items+=`<div class="action-sheet-item" onclick="closeActionSheet();openPip('${f.id}','${esc(f.name)}')"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg><span>Install Package</span></div>`;
+  items+=`<div class="action-sheet-item danger" onclick="closeActionSheet();openDelete('${f.id}','${esc(f.name)}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg><span>Delete</span></div>`;
+  document.getElementById("asItems").innerHTML=items;
+  document.getElementById("actionSheet").classList.add("open");
+  document.body.style.overflow="hidden";
+}
+
+function getExtClass(ext){const m={py:"ext-py",js:"ext-js",ts:"ext-ts",json:"ext-json",sh:"ext-sh",yaml:"ext-yaml",yml:"ext-yaml",txt:"ext-txt",md:"ext-md",env:"ext-env"};return m[ext]||"ext-txt";}
+
+function renderFiles(files){
+  // Update label with folder context
+  const folderName=currentFolderId?allFolders.find(f=>f.id===currentFolderId)?.name:null;
+  const labelSuffix=folderName?` in "${folderName}"`:"";
+  document.getElementById("fileCountLabel").textContent=`${files.length} file${files.length!==1?"s":""}${labelSuffix}`;
+  const empty1=document.getElementById("emptyStateDesk"),tbl=document.getElementById("tableWrap");
+  const empty2=document.getElementById("emptyStateMobile"),cards=document.getElementById("mobileCardBody");
+  if(!files.length){empty1.style.display="flex";tbl.style.display="none";empty2.style.display="flex";cards.innerHTML="";return;}
+  empty1.style.display="none";tbl.style.display="block";empty2.style.display="none";
+
+  document.getElementById("fileTableBody").innerHTML=files.map(f=>{
+    const ext=(f.type||"txt").toLowerCase();
+    const isRun=f.status==="active";
+    const pending=f._pending?"style='opacity:.5'":" ";
+    return `<tr ${pending} id="row-${f.id}">
+      <td style="width:28px"><input type="checkbox" class="file-cb" style="accent-color:var(--primary)" onchange="toggleFileSelect('${f.id}',this)" ${selectedFiles.has(f.id)?"checked":""}/></td>
+      <td><div class="file-name-cell"><span class="file-ext-badge ${getExtClass(ext)}">${ext}</span><div style="min-width:0"><span class="file-name-txt">${esc(f.name)}</span><div class="file-tag-wrap">${renderFileTags(f.id)}<button class="tag-add-btn" onclick="event.stopPropagation();openTagsModal('${f.id}','${esc(f.name)}')">+ tag</button></div></div>${f._pending?'<span style="font-size:10px;color:var(--text-muted);margin-left:4px">saving…</span>':""}</div></td>
+      <td><span class="file-size-txt">${esc(f.size||"—")}</span></td>
+      <td>${(()=>{const R=new Set(["py","js"]);if(!R.has(ext))return `<span class="badge" style="background:rgba(100,116,139,.1);color:#64748B;border:1px solid rgba(100,116,139,.18)"><span class="badge-dot" style="background:#64748B;opacity:.5"></span>Not runnable</span>`;return `<span class="badge ${isRun?"badge-running":"badge-stopped"}"><span class="badge-dot"></span>${isRun?"Running":"Stopped"}</span>`;})()}</td>
+      <td><span style="font-size:12px;color:var(--text-muted)">${fmtDate(f.upload_time)}</span></td>
+      <td>
+        <div class="row-actions" style="justify-content:flex-end">
+          ${f.editable&&!f._pending?`<button class="btn btn-secondary btn-sm" onclick="copyFileContent('${f.id}','${esc(f.name)}')" title="Copy to clipboard"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>`:""}
+          ${f.editable&&!f._pending?`<button class="btn btn-info btn-sm" onclick="goToEditor('${f.id}','${esc(f.name)}')"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Edit</button>`:""}
+          ${!f._pending?`<button class="btn btn-secondary btn-sm" onclick="openRename('${f.id}','${esc(f.name)}')"><svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Rename</button>`:""}
+          ${!f._pending&&allFolders.length?`<button class="btn btn-secondary btn-sm" onclick="openMoveFile('${f.id}','${esc(f.name)}')"><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Move</button>`:""}
+          ${!f._pending?`<button class="btn btn-secondary btn-sm" onclick="openPip('${f.id}','${esc(f.name)}')">pip</button>`:""}
+          ${!f._pending?`<button class="btn btn-danger btn-sm" onclick="openDelete('${f.id}','${esc(f.name)}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:""}
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+
+  cards.innerHTML=files.map(f=>{
+    const ext=(f.type||"txt").toLowerCase();
+    const isRun=f.status==="active";
+    const fStr=JSON.stringify({id:f.id,name:f.name,editable:f.editable}).replace(/'/g,"&#39;");
+    return `<div class="file-card ${f._pending?"deleting":""}">
+      <span class="file-ext-badge ${getExtClass(ext)}" style="padding:4px 7px;font-size:10px">${ext}</span>
+      <div class="file-card-main">
+        <div class="file-card-name">${esc(f.name)}</div>
+        <div class="file-card-meta">
+          ${(()=>{const R=new Set(["py","js"]);if(!R.has(ext))return `<span class="badge" style="padding:1px 7px;font-size:10.5px;background:rgba(100,116,139,.1);color:#64748B;border:1px solid rgba(100,116,139,.18)"><span class="badge-dot" style="background:#64748B;opacity:.5"></span>Not runnable</span>`;return `<span class="badge ${isRun?"badge-running":"badge-stopped"}" style="padding:1px 7px;font-size:10.5px"><span class="badge-dot"></span>${isRun?"Running":"Stopped"}</span>`;})()}
+          <span style="font-size:11.5px;color:var(--text-secondary)">${esc(f.size||"—")}</span>
+          ${f._pending?'<span style="font-size:11px;color:var(--text-muted)">saving…</span>':""}
+        </div>
+      </div>
+      ${!f._pending?`<button class="file-card-btn" onclick='openActionSheet(${fStr})'><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>`:""}
+    </div>`;
+  }).join("");
+}
+
+function filterFiles(q){const base=getFilteredFiles();renderFiles(q?base.filter(f=>f.name.toLowerCase().includes(q.toLowerCase())):base);}
+
+function openDelete(id,name){deleteFileId=id;document.getElementById("deleteFileName").textContent=name;openModal("deleteModal");}
+async function confirmDelete(){
+  if(!deleteFileId)return;
+  const btn=document.getElementById("confirmDelBtn");
+  btn.disabled=true;btn.textContent="Deleting…";
+  const idToDelete=deleteFileId;
+  // Track as pending so loadFiles() doesn't restore it
+  pendingDeletes.add(idToDelete);
+  // Optimistic: remove immediately from UI
+  const removed=allFiles.find(f=>f.id===idToDelete);
+  const idx=allFiles.findIndex(f=>f.id===idToDelete);
+  allFiles=allFiles.filter(f=>f.id!==idToDelete);
+  renderFolders(); // update folder counts
+  renderFiles(getFilteredFiles());
+  closeModal("deleteModal");
+  try{
+    const r=await api(`/api/files/delete/${idToDelete}`,{method:"DELETE"});const d=await r.json();
+    if(d.success){
+      toast("File deleted","success");
+      pendingDeletes.delete(idToDelete); // confirmed deleted, remove from pending
+    } else {
+      // API failed — restore the file
+      pendingDeletes.delete(idToDelete);
+      if(removed){allFiles.splice(idx,0,removed);renderFolders();renderFiles(getFilteredFiles());}
+      toast(d.error||"Delete failed","error");
+    }
+  }catch(e){
+    pendingDeletes.delete(idToDelete);
+    if(removed){allFiles.splice(idx,0,removed);renderFolders();renderFiles(getFilteredFiles());}
+    toast("Delete failed","error");
+  }
+  finally{btn.disabled=false;btn.innerHTML='<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete';}
+}
+
+function openRename(id,name){renameFileId=id;document.getElementById("renameInput").value=name;openModal("renameModal");setTimeout(()=>document.getElementById("renameInput").select(),100);}
+async function confirmRename(){
+  const name=document.getElementById("renameInput").value.trim();
+  if(!name||!renameFileId){toast("Enter a file name","warning");return;}
+  const btn=document.getElementById("confirmRenameBtn");
+  btn.disabled=true;btn.textContent="Renaming…";
+  // Optimistic update
+  const file=allFiles.find(f=>f.id===renameFileId);
+  const oldName=file?.name;
+  if(file)file.name=name;
+  renderFiles(allFiles);
+  closeModal("renameModal");
+  try{
+    const r=await api(`/api/files/rename/${renameFileId}`,{method:"POST",body:JSON.stringify({name})});
+    const d=await r.json();
+    if(d.success){toast("File renamed","success");}
+    else{if(file)file.name=oldName;renderFiles(allFiles);toast(d.error||"Rename failed","error");}
+  }catch(e){if(file)file.name=oldName;renderFiles(allFiles);toast("Rename failed","error");}
+  finally{btn.disabled=false;btn.textContent="Rename";}
+}
+
+function openPip(id,name){pipFileId=id;document.getElementById("pipFileName").textContent=name;document.getElementById("pipInput").value="";document.getElementById("pipOutput").style.display="none";openModal("pipModal");setTimeout(()=>document.getElementById("pipInput").focus(),100);}
+async function runPipInstall(){
+  const pkg=document.getElementById("pipInput").value.trim();
+  if(!pkg){toast("Enter a package name","warning");return;}
+  const btn=document.getElementById("pipInstallBtn");btn.disabled=true;btn.textContent="Installing…";
+  document.getElementById("pipOutput").style.display="block";
+  document.getElementById("pipOutput").textContent="Installing "+pkg+"…\n";
+  try{
+    const r=await api(`/api/files/pip/${pipFileId}`,{method:"POST",body:JSON.stringify({package:pkg})});
+    const d=await r.json();
+    document.getElementById("pipOutput").textContent=(d.output||d.error||"Done");
+    if(d.success)toast(`${pkg} installed`,"success");else toast(d.error||"Failed","error");
+  }catch(e){toast("pip failed","error");}
+  finally{btn.disabled=false;btn.textContent="Install";}
+}
+
+function goToEditor(id,name){window.location.href=`/editor?id=${id}&file=${encodeURIComponent(name)}&from=files`;}
+
+async function syncFiles(){
+  const btn=document.getElementById("syncBtn");btn.disabled=true;btn.textContent="Syncing…";
+  try{const r=await api("/api/files/sync",{method:"POST"});const d=await r.json();if(d.success){toast("Synced","success");loadFiles();}else toast(d.error||"Sync failed","error");}
+  catch(e){toast("Sync failed","error");}
+  finally{btn.disabled=false;btn.textContent="Sync";}
+}
+
+async function handleFileUpload(file){
+  if(!file)return;
+  // File size warning
+  const sizeWarn=document.getElementById("uploadSizeWarn");
+  if(sizeWarn){
+    if(file.size>5*1024*1024){sizeWarn.classList.add("show");setTimeout(()=>sizeWarn.classList.remove("show"),8000);}
+    else sizeWarn.classList.remove("show");
+  }
+  const prog=document.getElementById("upProgress"),bar=document.getElementById("upBar");
+  const pct=document.getElementById("upPct");
+  prog.style.display="block";
+  
+  function setProgress(p){
+    bar.style.width=p+"%";
+    if(pct) pct.textContent=Math.round(p)+"%";
+  }
+  
+  setProgress(5);
+  const form=new FormData();
+  form.append("file",file);
+  // Send current folder so file lands in the right place
+  if(currentFolderId)form.append("folder_id",currentFolderId);
+  
+  // Use XHR for real upload progress
+  await new Promise((resolve)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open("POST","/api/files/upload");
+    xhr.setRequestHeader("X-Session-Id",SID());
+    xhr.upload.onprogress=e=>{
+      if(e.lengthComputable) setProgress(Math.min(90,Math.round((e.loaded/e.total)*90)));
+    };
+    xhr.onload=()=>{
+      setProgress(100);
+      try{
+        const d=JSON.parse(xhr.responseText);
+        if(d.success){
+          const folderName=currentFolderId?allFolders.find(f=>f.id===currentFolderId)?.name:null;
+          toast(`✅ ${file.name} uploaded${folderName?` to "${folderName}"`:""}!`,"success");
+          loadFiles();
+        }
+        else toast(d.error||"Upload failed","error");
+      }catch{toast("Upload failed","error");}
+      resolve();
+    };
+    xhr.onerror=()=>{toast("Upload failed","error");resolve();};
+    setProgress(10);
+    xhr.send(form);
+  });
+  
+  setTimeout(()=>{prog.style.display="none";setProgress(0);},800);
+  document.getElementById("fileUploadInput").value="";
+}
+
+const uz=document.getElementById("uploadZone");
+uz.addEventListener("dragover",e=>{e.preventDefault();uz.classList.add("drag-over");});
+uz.addEventListener("dragleave",()=>uz.classList.remove("drag-over"));
+uz.addEventListener("drop",e=>{e.preventDefault();uz.classList.remove("drag-over");const f=e.dataTransfer.files[0];if(f)handleFileUpload(f);});
+
+
+// ─── FILE TAGS ──────────────────────────────────────────────
+const TAGS_DEFS=[
+  {key:"production",label:"🔴 Production",cls:"tag-production"},
+  {key:"testing",label:"🟡 Testing",cls:"tag-testing"},
+  {key:"stable",label:"🟢 Stable",cls:"tag-stable"},
+  {key:"dev",label:"🔵 Dev",cls:"tag-dev"},
+  {key:"paused",label:"⚫ Paused",cls:"tag-paused"},
+];
+// Tags stored in Firebase (with localStorage fallback cache)
+let _tagsCache={};
+async function loadAllTagsFromDB(){
+  try{
+    const r=await api("/api/files/tags");const d=await r.json();
+    if(d.success&&d.tags){
+      _tagsCache={};
+      for(const [fid,val] of Object.entries(d.tags)){
+        if(Array.isArray(val))_tagsCache[fid]=val;
+        else if(typeof val==="string"&&val)_tagsCache[fid]=[val];
+        else _tagsCache[fid]=[];
+      }
+    }
+  }catch(e){}
+}
+function getFileTags(fileId){return _tagsCache[fileId]||[];}
+async function setFileTags(fileId,tags){
+  _tagsCache[fileId]=tags;
+  try{
+    const r=await api("/api/files/tags/"+fileId,{method:"POST",body:JSON.stringify({tags:tags})});
+    const d=await r.json();
+    if(!d.success)console.warn("Tags save failed:",d.error);
+  }catch(e){}
+}
+function renderFileTags(fileId){
+  const tags=getFileTags(fileId);
+  return tags.map(t=>{
+    const def=TAGS_DEFS.find(d=>d.key===t);
+    if(!def)return "";
+    return `<span class="file-tag ${def.cls}" onclick="event.stopPropagation();openTagsModal('${fileId}','')" title="Edit tags">${def.label}</span>`;
+  }).join("");
+}
+let _tagsFileId=null;
+function openTagsModal(fileId,fileName){
+  _tagsFileId=fileId;
+  const tags=getFileTags(fileId);
+  const modal=document.getElementById("tagsModal");
+  const content=document.getElementById("tagsModalContent");
+  document.getElementById("tagsModalTitle").textContent=fileName?`Tags — ${fileName}`:"Edit Tags";
+  content.innerHTML=TAGS_DEFS.map(d=>`
+    <label class="tags-option">
+      <input type="checkbox" value="${d.key}" ${tags.includes(d.key)?"checked":""}/>
+      <span class="file-tag ${d.cls}">${d.label}</span>
+    </label>
+  `).join("");
+  if(modal)modal.classList.add("open");
+}
+async function saveFileTags(){
+  if(!_tagsFileId)return;
+  const checks=document.querySelectorAll("#tagsModalContent input[type=checkbox]:checked");
+  const selected=Array.from(checks).map(c=>c.value);
+  await setFileTags(_tagsFileId,selected);
+  const modal=document.getElementById("tagsModal");
+  if(modal)modal.classList.remove("open");
+  renderFiles(getFilteredFiles());
+  toast("Tags saved to cloud!","success");
+}
+
+// ── MULTI-SELECT ──────────────────────────────────────────
+let selectedFiles=new Set();
+function toggleFileSelect(fileId,el){
+  if(selectedFiles.has(fileId)){selectedFiles.delete(fileId);if(el)el.checked=false;}
+  else{selectedFiles.add(fileId);if(el)el.checked=true;}
+  updateMultiBar();
+}
+function selectAllFiles(){
+  const allIds=getFilteredFiles().map(f=>f.id);
+  if(selectedFiles.size===allIds.length){selectedFiles.clear();document.querySelectorAll(".file-cb").forEach(cb=>cb.checked=false);}
+  else{allIds.forEach(id=>selectedFiles.add(id));document.querySelectorAll(".file-cb").forEach(cb=>cb.checked=true);}
+  updateMultiBar();
+}
+function updateMultiBar(){
+  const bar=document.getElementById("multiBar");
+  const cnt=document.getElementById("multiBarCount");
+  if(!bar)return;
+  if(selectedFiles.size>0){bar.style.display="flex";if(cnt)cnt.textContent=selectedFiles.size+" selected";}
+  else bar.style.display="none";
+}
+async function multiDelete(){
+  if(!selectedFiles.size)return;
+  if(!confirm(`Delete ${selectedFiles.size} files? This cannot be undone.`))return;
+  const idsToDelete=Array.from(selectedFiles);
+  // Track as pending so they don't reappear
+  idsToDelete.forEach(id=>pendingDeletes.add(id));
+  // Optimistic: remove from UI immediately
+  allFiles=allFiles.filter(f=>!idsToDelete.includes(f.id));
+  renderFolders();renderFiles(getFilteredFiles());
+  toast("Deleting "+idsToDelete.length+" files...","info");
+  try{
+    const r=await api("/api/files/multi-action",{method:"POST",body:JSON.stringify({file_ids:idsToDelete,action:"delete"})});
+    const d=await r.json();
+    if(d.success){
+      idsToDelete.forEach(id=>pendingDeletes.delete(id));
+      toast("Deleted "+idsToDelete.length+" files","success");
+      selectedFiles.clear();updateMultiBar();await loadFiles();
+    }
+    else{idsToDelete.forEach(id=>pendingDeletes.delete(id));toast(d.error||"Failed","error");await loadFiles();}
+  }catch(e){idsToDelete.forEach(id=>pendingDeletes.delete(id));toast("Network error","error");await loadFiles();}
+}
+async function multiTag(tag){
+  if(!selectedFiles.size)return;
+  try{
+    const r=await api("/api/files/multi-action",{method:"POST",body:JSON.stringify({file_ids:Array.from(selectedFiles),action:"tag",tag:tag})});
+    const d=await r.json();
+    if(d.success){
+      selectedFiles.forEach(fid=>{_tagsCache[fid]=[tag];});
+      toast("Tagged "+selectedFiles.size+" files","success");
+      renderFiles(getFilteredFiles());
+    }else toast(d.error||"Failed","error");
+  }catch(e){toast("Network error","error");}
+}
+function clearMultiSelect(){selectedFiles.clear();document.querySelectorAll(".file-cb").forEach(cb=>cb.checked=false);updateMultiBar();}
+
+// ─── COPY FILE CONTENT ──────────────────────────────────────
+async function copyFileContent(fileId, fileName){
+  try{
+    toast("Copying…","info");
+    const r=await api(`/api/files/content/${fileId}`);const d=await r.json();
+    if(d.success&&d.content!=null){
+      await navigator.clipboard.writeText(d.content);
+      toast(`✅ ${fileName} copied to clipboard!`,"success");
+    } else toast(d.error||"Could not copy","error");
+  }catch(e){toast("Copy failed","error");}
+}
+
+function toast(msg,type="info"){
+  const ICONS={success:`<svg class="toast-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,error:`<svg class="toast-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,info:`<svg class="toast-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,warning:`<svg class="toast-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`};
+  const c=document.getElementById("toastStack");const el=document.createElement("div");
+  el.className=`toast toast-${type}`;el.innerHTML=`${ICONS[type]||ICONS.info}<span>${esc(msg)}</span>`;
+  c.appendChild(el);setTimeout(()=>{el.classList.add("toast-out");el.addEventListener("animationend",()=>el.remove(),{once:true});},4000);
+}
+
+async function init(){
+  if(!SID()){window.location.href="/";return;}
+  try{
+    const r=await api("/api/auth/me");if(!r.ok){window.location.href="/";return;}
+    const d=await r.json();const u=d.user;
+    const name=u.name||u.email||"User";
+    document.getElementById("sName").textContent=name;document.getElementById("sRole").textContent=u.role;
+    const letter=name[0].toUpperCase();const color=avatarColor(name);
+    document.querySelectorAll(".sidebar-avatar,.topbar-avatar").forEach(el=>{el.textContent=letter;el.style.background=color;});
+    if(["admin","owner"].includes(u.role))document.getElementById("adminNavItem").style.display="block";
+  }catch(e){window.location.href="/";}
+  // Load tags from DB first, then load files
+  loadAllTagsFromDB();  // non-blocking
+  loadFiles();
+  loadNotifications();
+}
+init();
+</script>
+</body>
+</html>

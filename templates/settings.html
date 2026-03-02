@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><meta name="apple-mobile-web-app-title" content="Nexora"/><meta name="theme-color" content="#5B6EF7"/><link rel="manifest" href="/manifest.json"/>
+<title>Settings — Nexora Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include '_shell.html' %}
+<style>
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--text-muted);margin-bottom:12px;}
+.info-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);margin-bottom:7px;}
+.info-row-label{font-size:13px;color:var(--text-secondary);}
+.info-row-value{font-size:13px;font-weight:600;color:var(--text-primary);font-family:'JetBrains Mono',monospace;}
+.plan-card{background:linear-gradient(135deg,rgba(91,110,247,0.12),rgba(139,92,246,0.08));border:1px solid rgba(91,110,247,0.2);border-radius:var(--radius-lg);padding:22px;}
+.plan-name{font-size:20px;font-weight:800;color:var(--text-primary);letter-spacing:-.3px;margin-bottom:3px;}
+.plan-desc{font-size:13px;color:var(--text-secondary);margin-bottom:18px;}
+.plan-limits{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.plan-limit-item{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px 14px;}
+.plan-limit-val{font-size:20px;font-weight:800;color:var(--text-primary);}
+.plan-limit-lbl{font-size:11.5px;color:var(--text-secondary);margin-top:2px;}
+.danger-zone{border:1px solid var(--danger-border);border-radius:var(--radius-lg);padding:20px;background:var(--danger-soft);}
+.danger-zone-title{font-size:14px;font-weight:700;color:var(--danger);margin-bottom:4px;}
+.danger-zone-desc{font-size:13px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;}
+.plan-option{display:flex;align-items:center;gap:12px;padding:13px 16px;border:1px solid var(--border-default);border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;transition:all .15s;}
+.plan-option:hover{border-color:var(--border-strong);background:var(--bg-hover);}
+.plan-option.selected{border-color:var(--primary);background:var(--primary-soft);}
+.plan-option-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--border-strong);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.plan-option.selected .plan-option-radio{border-color:var(--primary);background:var(--primary);}
+.plan-option.selected .plan-option-radio::after{content:'';width:6px;height:6px;border-radius:50%;background:white;}
+.plan-option-name{font-size:13.5px;font-weight:700;color:var(--text-primary);}
+.plan-option-desc{font-size:12px;color:var(--text-secondary);}
+@media(max-width:900px){.settings-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<script>
+(function(){
+  var sid=localStorage.getItem('nsid');
+  if(!sid){window.location.replace('/');return;}
+  document.documentElement.style.visibility='hidden';
+  fetch('/api/auth/me',{headers:{'X-Session-Id':sid}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.success){document.documentElement.style.visibility='';}
+      else{localStorage.removeItem('nsid');window.location.replace('/');}
+    })
+    .catch(function(){document.documentElement.style.visibility='';});
+})();
+</script>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="/dashboard">
+      <div class="sidebar-brand-icon"><svg viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div>
+      <div class="sidebar-brand-text">Nexora<span>Cloud</span></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="/dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-item" href="/files"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+      <a class="nav-item" href="/bots"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bot Manager</a>
+      <a class="nav-item" href="/editor"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Code Editor</a>
+      <div class="nav-section-label" style="margin-top:8px">Workspace</div>
+      <a class="nav-item" href="/activity"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity Log</a>
+      <a class="nav-item" href="/support"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Support</a>
+      <a class="nav-item" href="/subusers"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Sub-Users</a>
+      <a class="nav-item active" href="/settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+      <div id="adminNavItem" style="display:none">
+        <div class="nav-section-label" style="margin-top:8px">Admin</div>
+        <a class="nav-item" href="/admin"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Admin Panel</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" onclick="window.location.href='/settings'">
+        <div class="sidebar-avatar" id="sAvatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-name" id="sName">Loading…</div><div class="sidebar-user-role" id="sRole">—</div></div>
+        <button class="sidebar-logout-btn" onclick="event.stopPropagation();doLogout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sOverlay" onclick="closeSidebar()"></div>
+  <div class="topbar" id="topbar">
+    <button class="topbar-menu-btn" onclick="openSidebar()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-brand">Nexora<span>Cloud</span></span>
+    <div class="topbar-right" style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+      <div style="position:relative">
+        <button class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notif-badge" id="notifBadge" style="display:none">0</span></button>
+        <div class="notif-dropdown" id="notifDropdown"><div class="notif-head"><span class="notif-head-title">Notifications</span><button class="notif-mark-all" onclick="markAllRead()">Mark all read</button></div><div class="notif-list" id="notifList"><div class="notif-empty">🔔 No notifications</div></div></div>
+      </div>
+      <div class="topbar-avatar" id="tAvatar">?</div>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <div class="page-inner">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Settings</div>
+          <div class="page-subtitle">Manage your account preferences</div>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <!-- Left column -->
+        <div>
+          <!-- Account Info -->
+          <div style="margin-bottom:24px">
+            <div class="section-label">Account Information</div>
+            <div class="card">
+              <div class="card-body">
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+                  <div style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:white;flex-shrink:0" id="bigAvatar">?</div>
+                  <div>
+                    <div style="font-size:16px;font-weight:700;color:var(--text-primary)" id="bigName">Loading…</div>
+                    <div style="font-size:13px;color:var(--text-secondary);margin-top:2px" id="bigEmail">—</div>
+                  </div>
+                </div>
+                <div class="info-row"><span class="info-row-label">Role</span><span class="info-row-value" id="infoRole">—</span></div>
+                <div class="info-row"><span class="info-row-label">User ID</span><span class="info-row-value" id="infoUID" style="font-size:10.5px">—</span></div>
+                
+              </div>
+            </div>
+          </div>
+
+          <!-- Security -->
+          <div style="margin-bottom:24px">
+            <div class="section-label">Security</div>
+            <div class="card">
+              <div class="card-body">
+                <div class="form-group">
+                  <label class="form-label">Current Password</label>
+                  <input type="password" class="form-input" id="curPwd" placeholder="Enter current password"/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">New Password</label>
+                  <input type="password" class="form-input" id="newPwd" placeholder="Enter new password"/>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                  <label class="form-label">Confirm New Password</label>
+                  <input type="password" class="form-input" id="confPwd" placeholder="Confirm new password"/>
+                </div>
+              </div>
+              <div class="card-footer" style="justify-content:flex-end">
+                <button class="btn btn-primary" onclick="changePassword()" id="changePwdBtn">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Update Password
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danger Zone -->
+          <div>
+            <div class="section-label">Danger Zone</div>
+            <div class="danger-zone">
+              <div class="danger-zone-title">Sign Out</div>
+              <div class="danger-zone-desc">You will be signed out of this session. Your files and data are safe.</div>
+              <button class="btn btn-danger" onclick="doLogout()">
+                <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div>
+          <!-- Plan & Billing -->
+          <div style="margin-bottom:24px">
+            <div class="section-label">Plan &amp; Billing</div>
+            <div class="plan-card">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+                <div>
+                  <div class="plan-name" id="planName">Free Plan</div>
+                  <div class="plan-desc">Your current subscription tier</div>
+                </div>
+                <span class="badge badge-primary" id="planBadge">FREE</span>
+              </div>
+              <!-- Pending request banner -->
+              <div id="pendingRequestBanner" style="display:none;padding:10px 12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;margin-bottom:12px;font-size:12.5px;color:#F59E0B;display:none">
+                ⏳ <span id="pendingRequestText">Upgrade request pending admin review</span>
+              </div>
+              <div class="plan-limits">
+                <div class="plan-limit-item">
+                  <div class="plan-limit-val" id="planFileCount">10</div>
+                  <div class="plan-limit-lbl">Max Files</div>
+                </div>
+                <div class="plan-limit-item">
+                  <div class="plan-limit-val" id="planFileSize">20 MB</div>
+                  <div class="plan-limit-lbl">Per File</div>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-block" id="upgradeBtn" onclick="openModal('upgradeModal')">
+                <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                Request Upgrade
+              </button>
+            </div>
+          </div>
+
+          <!-- Update Profile Name -->
+          <div style="margin-bottom:24px">
+            <div class="section-label">Profile</div>
+            <div class="card">
+              <div class="card-body">
+                <div class="form-group" style="margin-bottom:0">
+                  <label class="form-label">Display Name</label>
+                  <div style="display:flex;gap:8px">
+                    <input type="text" class="form-input" id="displayName" placeholder="Your name"/>
+                    <button class="btn btn-primary" onclick="saveName()" id="saveNameBtn">Save</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notifications Settings -->
+          <div>
+            <div class="section-label">Notifications</div>
+            <div class="card">
+              <div class="card-body">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                  <div style="width:44px;height:44px;background:rgba(91,110,247,0.12);border:1px solid rgba(91,110,247,0.25);border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  </div>
+                  <div>
+                    <div style="font-size:13.5px;font-weight:700;color:var(--text-primary)">In-App Notifications</div>
+                    <div style="font-size:12px;color:var(--text-secondary)">Receive alerts from admin and system events in the bell icon.</div>
+                  </div>
+                </div>
+                <div style="padding:12px 14px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:10px;display:flex;align-items:center;gap:10px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span style="font-size:13px;color:var(--text-secondary)">Notifications are <b style="color:var(--text-primary)">active</b>. Check the 🔔 bell in the top bar.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upgrade Request Modal -->
+<div class="modal-overlay" id="upgradeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Request Plan Upgrade</div>
+        <div class="modal-subtitle">Select your desired plan. Admin will review and apply it.</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('upgradeModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Select Plan</label>
+        <div class="plan-option selected" onclick="selectPlan('subscribed',this)" id="plan-subscribed">
+          <div class="plan-option-radio"></div>
+          <div>
+            <div class="plan-option-name">Subscribed</div>
+            <div class="plan-option-desc">50 files, 50MB per file, priority support</div>
+          </div>
+        </div>
+        <div class="plan-option" onclick="selectPlan('pro',this)" id="plan-pro">
+          <div class="plan-option-radio"></div>
+          <div>
+            <div class="plan-option-name">Pro</div>
+            <div class="plan-option-desc">100 files, 100MB per file, advanced features</div>
+          </div>
+        </div>
+        <div class="plan-option" onclick="selectPlan('enterprise',this)" id="plan-enterprise">
+          <div class="plan-option-radio"></div>
+          <div>
+            <div class="plan-option-name">Enterprise</div>
+            <div class="plan-option-desc">Unlimited files, dedicated support, SLA</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Additional Notes (optional)</label>
+        <textarea class="form-textarea" id="upgradeNotes" placeholder="Any additional details about your use case…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('upgradeModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitUpgradeRequest()" id="upgradeSubmitBtn">
+        <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Submit Request
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+<script>
+const SID = () => localStorage.getItem("nsid") || "";
+const api = (p,o={}) => fetch(p,{headers:{"X-Session-Id":SID(),"Content-Type":"application/json",...(o.headers||{})}, ...o});
+const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const AVATAR_COLORS=["#5B6EF7","#8B5CF6","#EC4899","#F59E0B","#10B981","#38BDF8","#EF4444","#6366F1","#14B8A6","#F97316"];
+function avatarColor(n){const c=(n||"?").charCodeAt(0);return AVATAR_COLORS[c%AVATAR_COLORS.length];}
+function openSidebar(){document.getElementById("sidebar").classList.add("open");document.getElementById("sOverlay").classList.add("open");document.body.style.overflow="hidden";}
+function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sOverlay").classList.remove("open");document.body.style.overflow="";}
+function openModal(id){document.getElementById(id).classList.add("open");}
+function closeModal(id){document.getElementById(id).classList.remove("open");}
+document.querySelectorAll(".modal-overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("open");}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".modal-overlay.open").forEach(m=>m.classList.remove("open"));});
+
+// ── Clear Firebase IndexedDB on logout ──────────────────────
+// signOut alone leaves stale OAuth state in IndexedDB → next
+// signInWithPopup silently fails. Clear all 3 DBs on logout.
+
+async function _clearAllFirebaseState() {
+  // ── Step 1: Clear Firebase IDB by OPENING + CLEARING (not deleteDatabase) ──
+  // deleteDatabase() is BLOCKED when Firebase SDK has the DB open,
+  // so it silently "succeeds" without deleting anything. Opening directly
+  // and clearing records works even with open connections.
+  await new Promise(resolve => {
+    try {
+      const req = indexedDB.open("firebaseLocalStorageDb");
+      req.onerror = () => resolve();
+      req.onsuccess = () => {
+        const db = req.result;
+        try {
+          const stores = Array.from(db.objectStoreNames);
+          if (!stores.length) { db.close(); resolve(); return; }
+          const tx = db.transaction(stores, "readwrite");
+          stores.forEach(s => { try { tx.objectStore(s).clear(); } catch(_) {} });
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror   = () => { db.close(); resolve(); };
+        } catch(_) { try { db.close(); } catch(_){} resolve(); }
+      };
+    } catch(_) { resolve(); }
+  });
+
+  // ── Step 2: Delete the other Firebase DBs (no open connections on these) ──
+  await Promise.all([
+    "firebase-heartbeat-database",
+    "firebase-installations-database"
+  ].map(name => new Promise(res => {
+    try { const r = indexedDB.deleteDatabase(name); r.onsuccess = r.onerror = r.onblocked = () => res(); }
+    catch(_) { res(); }
+  })));
+
+  // ── Step 3: Wipe firebase: keys from sessionStorage ──────────────────────
+  try {
+    Object.keys(sessionStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) sessionStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 4: Wipe firebase: keys from localStorage ────────────────────────
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) localStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 5: Expire Firebase cookies ──────────────────────────────────────
+  try {
+    const host = window.location.hostname;
+    const domains = [host, "." + host, ""];
+    const paths   = ["/", ""];
+    document.cookie.split(";").forEach(raw => {
+      const name = raw.trim().split("=")[0].trim();
+      if (!name) return;
+      const isFB = name.startsWith("firebase:") || name.startsWith("firebaseui:")
+                || name.startsWith("__Secure-firebase") || name.includes("firebase");
+      if (!isFB) return;
+      domains.forEach(d => paths.forEach(p => {
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;SameSite=None;Secure" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+      }));
+    });
+  } catch(_) {}
+}
+
+async function doLogout() {
+  try {
+    // Step 1: Firebase signOut (CRITICAL!)
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const app = initializeApp({apiKey:"AIzaSyATmS9Zy8YIxXf1qYpUB6wIw45i7K-3YVU",authDomain:"hosting-website-bot-v9-v1.firebaseapp.com",projectId:"hosting-website-bot-v9-v1"});
+    const auth = getAuth(app);
+    await signOut(auth);
+    
+    // Step 2: Backend session invalidation
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-Session-Id": localStorage.getItem("nsid") || "" }
+    }).catch(() => {});
+
+    // Step 3: Clear ALL Firebase persistent state
+    await _clearAllFirebaseState().catch(() => {});
+
+    // Step 4: Wipe all local state
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Step 5: Navigate with cache-buster
+    window.location.href = "/?" + Date.now();
+  } catch(err) {
+    console.error('Logout error:', err);
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = "/?" + Date.now();
+  }
+}
+
+let selectedPlan="subscribed";
+function selectPlan(plan, el){
+  selectedPlan=plan;
+  document.querySelectorAll(".plan-option").forEach(p=>p.classList.remove("selected"));
+  el.classList.add("selected");
+}
+
+async function submitUpgradeRequest(){
+  const notes=document.getElementById("upgradeNotes").value.trim();
+  const btn=document.getElementById("upgradeSubmitBtn");
+  btn.disabled=true;btn.textContent="Submitting…";
+  try{
+    const r=await api("/api/plans/upgrade-request",{method:"POST",body:JSON.stringify({requested_plan:selectedPlan,note:notes||""})});
+    const d=await r.json();
+    if(d.success){toast("Upgrade request submitted. Admin will review shortly.","success");closeModal("upgradeModal");}
+    else toast(d.error||"Failed to submit","error");
+  }catch(e){toast("Network error","error");}
+  finally{btn.disabled=false;btn.innerHTML='<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Submit Request';}
+}
+
+async function changePassword(){
+  const cur=document.getElementById("curPwd").value;
+  const nw=document.getElementById("newPwd").value;
+  const cf=document.getElementById("confPwd").value;
+  if(!cur||!nw){toast("Fill all fields","warning");return;}
+  if(nw!==cf){toast("Passwords don't match","warning");return;}
+  if(nw.length<6){toast("Password must be at least 6 characters","warning");return;}
+  const btn=document.getElementById("changePwdBtn");btn.disabled=true;btn.textContent="Updating…";
+  try{
+    const r=await api("/api/auth/change-password",{method:"POST",body:JSON.stringify({current:cur,password:nw})});
+    const d=await r.json();
+    if(d.success){toast("Password updated","success");document.getElementById("curPwd").value="";document.getElementById("newPwd").value="";document.getElementById("confPwd").value="";}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Network error","error");}
+  finally{btn.disabled=false;btn.textContent="Update Password";}
+}
+
+async function saveName(){
+  const name=document.getElementById("displayName").value.trim();
+  if(!name){toast("Enter a name","warning");return;}
+  const btn=document.getElementById("saveNameBtn");btn.disabled=true;btn.textContent="Saving…";
+  try{
+    const r=await api("/api/auth/update-profile",{method:"POST",body:JSON.stringify({name})});
+    const d=await r.json();
+    if(d.success){toast("Name updated","success");document.getElementById("bigName").textContent=name;document.getElementById("sName").textContent=name;}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Network error","error");}
+  finally{btn.disabled=false;btn.textContent="Save";}
+}
+
+function toast(msg,type="info"){
+  const ICONS={success:`<svg class="toast-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,error:`<svg class="toast-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,info:`<svg class="toast-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,warning:`<svg class="toast-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`};
+  const c=document.getElementById("toastStack");const el=document.createElement("div");
+  el.className=`toast toast-${type}`;el.innerHTML=`${ICONS[type]||ICONS.info}<span>${esc(msg)}</span>`;
+  c.appendChild(el);setTimeout(()=>{el.classList.add("toast-out");el.addEventListener("animationend",()=>el.remove(),{once:true});},4000);
+}
+
+async function submitAppeal(){
+  const text=document.getElementById("appealText")?.value.trim();
+  if(!text){toast("Please write your appeal message","warning");return;}
+  const btn=document.getElementById("appealBtn");btn.disabled=true;btn.textContent="Sending…";
+  try{
+    const r=await api("/api/unban-appeal",{method:"POST",body:JSON.stringify({appeal:text})});
+    const d=await r.json();
+    if(d.success){toast("Appeal submitted! We will review it soon.","success");btn.textContent="Appeal Submitted ✓";}
+    else toast(d.error||"Failed to submit appeal","error");
+  }catch(e){toast("Network error","error");}
+  finally{if(btn.textContent!=="Appeal Submitted ✓")btn.disabled=false;}
+}
+
+async function init(){
+  if(!SID()){window.location.href="/";return;}
+  try{
+    const r=await api("/api/auth/me");
+    if(!r.ok){window.location.href="/";return;}
+    const d=await r.json();
+    if(!d.success){window.location.href="/";return;}
+    const u=d.user;
+    const name=u.name||u.email||"User";
+    document.getElementById("sName").textContent=name;document.getElementById("sRole").textContent=u.role;
+    document.getElementById("bigName").textContent=name;document.getElementById("bigEmail").textContent=u.email||"—";
+    document.getElementById("infoRole").textContent=u.role||"—";
+    document.getElementById("infoUID").textContent=u.uid||u.id||"—";
+    
+    document.getElementById("displayName").value=u.name||"";
+    const letter=name[0].toUpperCase();const color=avatarColor(name);
+    document.querySelectorAll(".sidebar-avatar,.topbar-avatar").forEach(el=>{el.textContent=letter;el.style.background=color;});
+    document.getElementById("bigAvatar").textContent=letter;
+    document.getElementById("bigAvatar").style.background=color;
+    if(["admin","owner"].includes(u.role))document.getElementById("adminNavItem").style.display="block";
+
+    // Check if banned — show appeal section
+    if(u.banned){
+      let appealSection=document.getElementById("banAppealSection");
+      if(!appealSection){
+        appealSection=document.createElement("div");
+        appealSection.id="banAppealSection";
+        appealSection.style.cssText="margin-bottom:24px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-lg);padding:18px 20px;";
+        const pageInner=document.querySelector(".page-inner");
+        const firstCard=pageInner?.querySelector(".card");
+        if(firstCard)pageInner.insertBefore(appealSection,firstCard);
+        else pageInner?.appendChild(appealSection);
+      }
+      const reason=u.ban_reason?"<div style=\"font-size:12.5px;color:var(--text-secondary);margin-top:4px;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:6px\">Reason: "+esc(u.ban_reason||"")+"</div>":"";
+      appealSection.innerHTML=`
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#EF4444;fill:none;stroke-width:2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#EF4444">Your account is banned</div>
+            <div style="font-size:12px;color:var(--text-secondary)">You can submit an appeal to request a review</div>
+          </div>
+        </div>
+        ${reason}
+        <div style="margin-top:12px">
+          <label style="font-size:12.5px;font-weight:600;color:var(--text-primary);display:block;margin-bottom:6px">Appeal Message</label>
+          <textarea id="appealText" style="width:100%;background:var(--bg-elevated);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:13px;padding:10px 12px;resize:vertical;min-height:80px;outline:none;box-sizing:border-box" placeholder="Explain why you believe your ban should be lifted…"></textarea>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-danger" id="appealBtn" onclick="submitAppeal()">Submit Appeal</button>
+        </div>`;
+    }
+
+    // Plan info — derive from role
+    const PLAN_INFO = {
+      free:       { name: "Free Plan",   badge: "FREE",        max_files: 10,   max_size_mb: 20  },
+      subscribed: { name: "Subscribed",  badge: "SUBSCRIBED",  max_files: 50,   max_size_mb: 50  },
+      pro:        { name: "Pro",         badge: "PRO",         max_files: 100,  max_size_mb: 100 },
+      enterprise: { name: "Enterprise",  badge: "ENTERPRISE",  max_files: "∞",  max_size_mb: 200 },
+      admin:      { name: "Admin",       badge: "ADMIN",       max_files: "∞",  max_size_mb: 200 },
+      owner:      { name: "Owner",       badge: "OWNER",       max_files: "∞",  max_size_mb: "∞" },
+    };
+    const plan = PLAN_INFO[u.role] || PLAN_INFO.free;
+    document.getElementById("planName").textContent = plan.name;
+    document.getElementById("planBadge").textContent = plan.badge;
+    document.getElementById("planFileCount").textContent = plan.max_files;
+    document.getElementById("planFileSize").textContent = plan.max_size_mb + (plan.max_size_mb === "∞" ? "" : " MB");
+
+    // Hide upgrade button for admins/owners
+    if(["admin","owner"].includes(u.role)) {
+      document.getElementById("upgradeBtn").style.display = "none";
+    }
+
+    // Check for pending upgrade request
+    try {
+      const rReq = await api("/api/plans/my-request");
+      const dReq = await rReq.json();
+      const banner = document.getElementById("pendingRequestBanner");
+      const bannerText = document.getElementById("pendingRequestText");
+      if(dReq.success && dReq.pending_request) {
+        const req = dReq.pending_request;
+        banner.style.display = "block";
+        bannerText.textContent = `⏳ Upgrade to "${req.requested_plan}" pending admin review`;
+        document.getElementById("upgradeBtn").disabled = true;
+        document.getElementById("upgradeBtn").textContent = "Request Pending...";
+      } else if(dReq.success && dReq.all_requests && dReq.all_requests.length) {
+        const last = dReq.all_requests[0];
+        if(last.status === "approved") {
+          banner.style.display = "block";
+          banner.style.background = "rgba(16,185,129,.1)";
+          banner.style.borderColor = "rgba(16,185,129,.3)";
+          bannerText.style.color = "#10B981";
+          bannerText.textContent = `✅ Your upgrade to "${last.requested_plan}" was approved!`;
+        } else if(last.status === "rejected") {
+          banner.style.display = "block";
+          banner.style.background = "rgba(239,68,68,.1)";
+          banner.style.borderColor = "rgba(239,68,68,.3)";
+          bannerText.style.color = "#EF4444";
+          bannerText.textContent = `❌ Upgrade request declined: ${last.reject_reason || "No reason given"}`;
+        }
+      }
+    } catch(e) {}
+
+  }catch(e){console.error("Settings init error:",e);toast("Failed to load account data. Please refresh.","error");}
+  loadNotifications();
+}
+init();
+</script>
+</body>
+</html>

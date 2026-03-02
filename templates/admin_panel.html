@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin Panel — Nexora Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include '_shell.html' %}
+<style>
+.admin-tabs{display:flex;gap:4px;margin-bottom:24px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:12px;padding:5px;}
+.admin-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 12px;border-radius:8px;border:none;background:transparent;color:var(--text-secondary);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;}
+.admin-tab svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.admin-tab:hover{color:var(--text-primary);background:var(--bg-hover);}
+.admin-tab.active{color:var(--primary);background:var(--primary-soft);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+@media(max-width:600px){
+  .admin-tabs{flex-wrap:wrap;}
+  .admin-tab{flex:1 0 40%;font-size:12px;}
+  .tab-label{display:none;}
+}
+.stats-small{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+@media(max-width:600px){.stats-small{grid-template-columns:1fr 1fr;}}
+.role-select{background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-family:inherit;font-size:12.5px;padding:5px 9px;outline:none;cursor:pointer;transition:all .18s;}
+.role-select:focus{border-color:var(--primary);}
+.table-wrap{overflow-x:auto;}
+table{min-width:520px;}
+.notif-form-area{width:100%;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:10px;color:var(--text-primary);font-family:inherit;font-size:14px;padding:13px 16px;resize:vertical;min-height:80px;outline:none;transition:border-color .2s;box-sizing:border-box;}
+.notif-form-area:focus{border-color:var(--primary);}
+.admin-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+@media(max-width:700px){.admin-two-col{grid-template-columns:1fr;}}
+.admin-ticket-chat{display:flex;flex-direction:column;max-height:55vh;overflow-y:auto;gap:8px;padding:12px;background:var(--bg-elevated);border-radius:10px;margin-bottom:12px;}
+.admin-chat-msg{padding:8px 12px;border-radius:10px;font-size:13px;max-width:85%;}
+.admin-chat-msg.user{background:var(--primary-soft);color:var(--text-primary);align-self:flex-end;border-bottom-right-radius:3px;}
+.admin-chat-msg.support{background:var(--bg-surface);border:1px solid var(--border-subtle);align-self:flex-start;border-bottom-left-radius:3px;}
+.notif-type-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.type-pill{padding:6px 14px;border-radius:100px;border:1.5px solid var(--border-default);background:transparent;color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;}
+.type-pill.sel-info{border-color:rgba(56,189,248,0.5);background:rgba(56,189,248,0.1);color:#38BDF8;}
+.type-pill.sel-success{border-color:rgba(34,197,94,0.5);background:rgba(34,197,94,0.08);color:#22C55E;}
+.type-pill.sel-warning{border-color:rgba(245,158,11,0.5);background:rgba(245,158,11,0.08);color:#F59E0B;}
+.type-pill.sel-error{border-color:rgba(239,68,68,0.5);background:rgba(239,68,68,0.08);color:#EF4444;}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  var sid=localStorage.getItem('nsid');
+  if(!sid){window.location.replace('/');return;}
+  document.documentElement.style.visibility='hidden';
+  fetch('/api/auth/me',{headers:{'X-Session-Id':sid}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.success||!['admin','owner'].includes(d.user&&d.user.role)){window.location.replace('/dashboard');}
+      else{document.documentElement.style.visibility='';}
+    })
+    .catch(function(){window.location.replace('/');});
+})();
+</script>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="/dashboard">
+      <div class="sidebar-brand-icon"><svg viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg></div>
+      <div class="sidebar-brand-text">Nexora<span>Cloud</span></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="/dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-item" href="/files"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+      <a class="nav-item" href="/bots"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bot Manager</a>
+      <a class="nav-item" href="/editor"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Code Editor</a>
+      <div class="nav-section-label" style="margin-top:8px">Workspace</div>
+      <a class="nav-item" href="/subusers"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Sub-Users</a>
+      <a class="nav-item" href="/settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+      <div class="nav-section-label" style="margin-top:8px">Admin</div>
+      <a class="nav-item active" href="/admin"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Admin Panel</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sAvatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-name" id="sName">Loading…</div><div class="sidebar-user-role" id="sRole">—</div></div>
+        <button class="sidebar-logout-btn" onclick="doLogout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sOverlay" onclick="closeSidebar()"></div>
+  <div class="topbar" id="topbar">
+    <button class="topbar-menu-btn" onclick="openSidebar()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-brand">Nexora<span>Cloud</span></span>
+  </div>
+
+  <div class="page-content">
+    <div class="page-inner">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Admin Panel</div>
+          <div class="page-subtitle">Manage users, notifications and system</div>
+        </div>
+        <button class="btn btn-secondary" onclick="refreshCurrentTab()">
+          <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- Tab Bar -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="overview" onclick="switchTab('overview',this)">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span class="tab-label">Overview</span>
+        </button>
+        <button class="admin-tab" data-tab="users" onclick="switchTab('users',this)">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <span class="tab-label">Users</span>
+        </button>
+        <button class="admin-tab" data-tab="notifications" onclick="switchTab('notifications',this)">
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="tab-label">Notify</span>
+        </button>
+        <button class="admin-tab" data-tab="tickets" onclick="switchTab('tickets',this)">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span class="tab-label">Tickets</span>
+        </button>
+        <button class="admin-tab" data-tab="activity" onclick="switchTab('activity',this)">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span class="tab-label">Activity</span>
+        </button>
+      </div>
+
+      <!-- TAB: OVERVIEW -->
+      <div class="tab-panel active" id="tab-overview">
+        <div class="stats-small">
+          <div class="stat-card" style="--stat-color:#5B6EF7">
+            <div class="stat-icon" style="background:rgba(91,110,247,0.15)"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+            <div class="stat-value" id="sTotalUsers">—</div><div class="stat-label">Total Users</div>
+          </div>
+          <div class="stat-card" style="--stat-color:#22C55E">
+            <div class="stat-icon" style="background:rgba(34,197,94,0.13)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div class="stat-value" id="sTotalFiles">—</div><div class="stat-label">Total Files</div>
+          </div>
+          <div class="stat-card" style="--stat-color:#EF4444">
+            <div class="stat-icon" style="background:rgba(239,68,68,0.13)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+            <div class="stat-value" id="sBanned">—</div><div class="stat-label">Banned</div>
+          </div>
+        </div>
+        <div class="admin-two-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon" style="background:rgba(239,68,68,0.13)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+                <div><div class="card-title">Unban Appeals</div><div class="card-subtitle">User ban appeals</div></div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="loadAppeals()">Refresh</button>
+            </div>
+            <div id="appealsList"><div class="empty-state" style="padding:24px"><div class="empty-subtitle">Loading…</div></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon" style="background:rgba(245,158,11,0.13)"><svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
+                <div><div class="card-title">Upgrade Requests</div><div class="card-subtitle">Plan change requests</div></div>
+              </div>
+            </div>
+            <div id="adminUpgradeList"><div class="empty-state" style="padding:28px"><div class="empty-title">Loading…</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RESTORE ACCOUNTS + LEGAL EDITOR QUICK BUTTONS ── -->
+      <div class="grid-2" style="margin-bottom:16px">
+        <div class="card" style="cursor:pointer" onclick="openRestoreAccModal()">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon" style="background:rgba(16,185,129,0.13)"><svg viewBox="0 0 24 24" style="stroke:#10B981"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div>
+              <div><div class="card-title">Deleted Account Backups</div><div class="card-subtitle">Restore accounts &amp; manage cooldowns</div></div>
+            </div>
+            <button class="btn btn-success btn-sm" onclick="event.stopPropagation();openRestoreAccModal()">Open</button>
+          </div>
+        </div>
+        <div class="card" style="cursor:pointer" onclick="openLegalEditor()">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon" style="background:rgba(91,110,247,0.13)"><svg viewBox="0 0 24 24" style="stroke:#818CF8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+              <div><div class="card-title">Edit Legal Documents</div><div class="card-subtitle">Update Terms of Service &amp; Privacy Policy</div></div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openLegalEditor()">Edit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: USERS -->
+      <div class="tab-panel" id="tab-users">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon" style="background:rgba(167,139,250,0.13)"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+              <div><div class="card-title">All Users</div><div class="card-subtitle">Manage roles and access</div></div>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <div class="empty-state" id="usersEmpty"><div class="empty-subtitle">Loading users…</div></div>
+            <table id="usersTable" style="display:none">
+              <thead><tr><th>User</th><th>Role</th><th>Files</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+              <tbody id="usersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: NOTIFICATIONS -->
+      <div class="tab-panel" id="tab-notifications">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon" style="background:rgba(245,158,11,0.13)"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+              <div><div class="card-title">Send Notification</div><div class="card-subtitle">Push a site notification to all users</div></div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-group" style="margin-bottom:12px">
+              <label class="form-label">Notification Title</label>
+              <input class="form-input" id="notifTitle" placeholder="e.g. System Update, New Feature…"/>
+            </div>
+            <div class="form-group" style="margin-bottom:12px">
+              <label class="form-label">Message</label>
+              <textarea class="notif-form-area" id="notifMsg" placeholder="Write your notification message here…"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="margin-bottom:8px">Type</label>
+              <div class="notif-type-row">
+                <button class="type-pill sel-info" onclick="selectNotifType('info',this)">ℹ️ Info</button>
+                <button class="type-pill" onclick="selectNotifType('success',this)">✅ Success</button>
+                <button class="type-pill" onclick="selectNotifType('warning',this)">⚠️ Warning</button>
+                <button class="type-pill" onclick="selectNotifType('error',this)">🚨 Alert</button>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer" style="justify-content:flex-end">
+            <button class="btn btn-secondary" onclick="clearNotifForm()">Clear</button>
+            <button class="btn btn-primary" onclick="sendNotification()" id="notifBtn" style="margin-left:8px">
+              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send to All Users
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: TICKETS -->
+      <div class="tab-panel" id="tab-tickets">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon" style="background:rgba(56,189,248,0.13)"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+              <div><div class="card-title">Support Tickets</div><div class="card-subtitle">Open user requests</div></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="loadAdminTickets()">
+              <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Refresh
+            </button>
+          </div>
+          <div id="adminTicketList"><div class="empty-state" style="padding:28px"><div class="empty-title">Loading…</div></div></div>
+        </div>
+      </div>
+
+      <!-- TAB: ACTIVITY -->
+      <div class="tab-panel" id="tab-activity">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon" style="background:rgba(245,158,11,0.1)"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+              <div><div class="card-title">System Activity</div><div class="card-subtitle">All user actions across the platform</div></div>
+            </div>
+          </div>
+          <div id="activityList"><div class="empty-state"><div class="empty-subtitle">Loading…</div></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Ban Modal -->
+<div class="modal-overlay" id="banModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Ban User</div><div class="modal-subtitle" id="banModalSub">Provide a reason</div></div>
+      <button class="modal-close" onclick="closeModal('banModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Ban Reason</label>
+        <textarea class="form-textarea" id="banReason" placeholder="e.g. Violation of terms of service…" style="min-height:80px"></textarea>
+        <div class="form-hint">This reason will be shown to the user when they login.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('banModal')">Cancel</button>
+      <button class="btn btn-danger" id="banConfirmBtn" onclick="confirmBan()">Ban User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Suspend Modal -->
+<div class="modal-overlay" id="suspendModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Suspend Account</div><div class="modal-subtitle" id="suspendModalSub">User will see a full-screen suspension notice</div></div>
+      <button class="modal-close" onclick="closeModal('suspendModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:12px">
+        <label class="form-label">Suspension Reason <span style="color:#EF4444">*</span></label>
+        <textarea class="form-textarea" id="suspendReason" placeholder="e.g. Suspicious activity detected…" style="min-height:80px"></textarea>
+        <div class="form-hint">This will be displayed prominently to the user.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Duration</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="type-pill sel-info" id="sdur-perm" onclick="setSuspendDuration(null,this)">🔒 Permanent</button>
+          <button class="type-pill" id="sdur-1" onclick="setSuspendDuration(1,this)">1 Hour</button>
+          <button class="type-pill" id="sdur-24" onclick="setSuspendDuration(24,this)">24 Hours</button>
+          <button class="type-pill" id="sdur-72" onclick="setSuspendDuration(72,this)">3 Days</button>
+          <button class="type-pill" id="sdur-168" onclick="setSuspendDuration(168,this)">7 Days</button>
+          <button class="type-pill" id="sdur-720" onclick="setSuspendDuration(720,this)">30 Days</button>
+          <button class="type-pill" id="sdur-custom" onclick="setSuspendDuration('custom',this)">✏️ Custom</button>
+        </div>
+        <div id="customDurWrap" style="display:none;margin-top:8px">
+          <label class="form-label" style="margin-bottom:6px">Custom Duration</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+              <input type="number" id="cdur_months" min="0" max="24" value="0" style="width:64px;background:#0F1020;border:1px solid rgba(255,255,255,0.1);color:#E2E4F0;border-radius:8px;padding:7px 8px;font-size:14px;text-align:center">
+              <span style="font-size:11px;color:#8891B8">Months</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+              <input type="number" id="cdur_days" min="0" max="31" value="0" style="width:64px;background:#0F1020;border:1px solid rgba(255,255,255,0.1);color:#E2E4F0;border-radius:8px;padding:7px 8px;font-size:14px;text-align:center">
+              <span style="font-size:11px;color:#8891B8">Days</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+              <input type="number" id="cdur_hours" min="0" max="23" value="0" style="width:64px;background:#0F1020;border:1px solid rgba(255,255,255,0.1);color:#E2E4F0;border-radius:8px;padding:7px 8px;font-size:14px;text-align:center">
+              <span style="font-size:11px;color:#8891B8">Hours</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+              <input type="number" id="cdur_mins" min="0" max="59" value="0" style="width:64px;background:#0F1020;border:1px solid rgba(255,255,255,0.1);color:#E2E4F0;border-radius:8px;padding:7px 8px;font-size:14px;text-align:center">
+              <span style="font-size:11px;color:#8891B8">Minutes</span>
+            </div>
+          </div>
+          <div id="customDurPreview" style="margin-top:8px;font-size:12px;color:#818CF8"></div>
+        </div>
+      </div>
+      <!-- Show on Login toggle -->
+      <div class="form-group" style="margin-top:14px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="suspendShowLogin" style="width:16px;height:16px;accent-color:#5B6EF7;cursor:pointer"/>
+          <span>
+            <span style="font-size:14px;color:var(--text-primary);font-weight:600">Show suspension at login</span>
+            <span style="display:block;font-size:12px;color:var(--text-secondary);margin-top:2px">User will see suspend reason when they try to log in (like ban screen)</span>
+          </span>
+        </label>
+      </div>
+      <!-- Support Toggle -->
+      <div class="form-group" style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06)">
+        <label class="form-label">Platform Support</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+          <div id="supportToggleStatus" style="font-size:13px;color:#8891B8">Loading…</div>
+          <button id="supportToggleBtn" onclick="toggleSupport()" style="padding:7px 16px;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;border:none">…</button>
+        </div>
+        <div class="form-hint">When disabled, suspended/banned users cannot see the support button.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('suspendModal')">Cancel</button>
+      <button class="btn btn-danger" id="suspendConfirmBtn" onclick="confirmSuspend()">Suspend</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal-overlay" id="deleteAccModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title" style="color:#EF4444">⚠️ Delete Account</div><div class="modal-subtitle" id="deleteAccModalSub">This action is permanent</div></div>
+      <button class="modal-close" onclick="closeModal('deleteAccModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:12px 14px;font-size:13px;color:#EF4444;margin-bottom:14px">
+        ⚠️ This will permanently delete the account, all files, and data. <b>This cannot be undone.</b>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label class="form-label">Deletion Reason <span style="color:#EF4444">*</span></label>
+        <textarea class="form-textarea" id="deleteAccReason" placeholder="e.g. User requested deletion, policy violation…" style="min-height:70px"></textarea>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px">
+          <input type="checkbox" id="deleteKeepData" checked style="width:16px;height:16px;accent-color:#5B6EF7;cursor:pointer"/>
+          <span>
+            <span style="font-size:14px;color:var(--text-primary);font-weight:600">Keep data backup</span>
+            <span style="display:block;font-size:12px;color:var(--text-secondary);margin-top:1px">Save account data so you can restore it later</span>
+          </span>
+        </label>
+        <label class="form-label">Re-registration Cooldown</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="type-pill sel-info" id="cd-0" onclick="setDeleteCooldown(0,this)">None</button>
+          <button class="type-pill" id="cd-24" onclick="setDeleteCooldown(24,this)">24 Hrs</button>
+          <button class="type-pill" id="cd-72" onclick="setDeleteCooldown(72,this)">3 Days</button>
+          <button class="type-pill" id="cd-168" onclick="setDeleteCooldown(168,this)">7 Days</button>
+          <button class="type-pill" id="cd-720" onclick="setDeleteCooldown(720,this)">30 Days</button>
+          <button class="type-pill" id="cd-custom" onclick="setDeleteCooldown('custom',this)">✏️ Custom</button>
+        </div>
+        <div id="deleteCdCustomWrap" style="display:none;margin-top:6px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+              <input type="number" id="dcd_days" min="0" max="365" value="0" style="width:64px;background:#0F1020;border:1px solid rgba(255,255,255,0.1);color:#E2E4F0;border-radius:8px;padding:7px 8px;font-size:14px;text-align:center">
+              <span style="font-size:11px;color:#8891B8">Days</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+              <input type="number" id="dcd_hours" min="0" max="23" value="0" style="width:64px;background:#0F1020;border:1px solid rgba(255,255,255,0.1);color:#E2E4F0;border-radius:8px;padding:7px 8px;font-size:14px;text-align:center">
+              <span style="font-size:11px;color:#8891B8">Hours</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-hint">How long before the same email can create a new account.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('deleteAccModal')">Cancel</button>
+      <button class="btn btn-danger" id="deleteAccConfirmBtn" onclick="confirmDeleteAccount()">Delete Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ticket Chat Modal -->
+<div class="modal-overlay" id="ticketChatModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div><div class="modal-title" id="ticketChatTitle">Support Ticket</div><div class="modal-subtitle" id="ticketChatSub">—</div></div>
+      <button class="modal-close" onclick="closeModal('ticketChatModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="admin-ticket-chat" id="adminTicketMessages"></div>
+      <div style="display:flex;gap:8px">
+        <textarea class="chat-input" id="adminReplyInput" style="flex:1;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:13px;padding:8px 12px;outline:none;resize:none;min-height:38px;max-height:100px;transition:border-color .2s" placeholder="Reply as Support…"></textarea>
+        <button class="btn btn-primary" onclick="adminSendReply()">Send</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('ticketChatModal')">Close</button>
+      <button class="btn btn-danger" id="adminCloseTicketBtn" onclick="adminCloseActiveTicket()">Close Ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESTORE ACCOUNTS MODAL ── -->
+<div class="modal-overlay" id="restoreAccModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div><div class="modal-title" style="color:#10B981">♻️ Deleted Account Backups</div><div class="modal-subtitle">Restore or manage deleted accounts</div></div>
+      <button class="modal-close" onclick="closeModal('restoreAccModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div id="restoreAccList" style="max-height:400px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('restoreAccModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── EDIT REGISTRATION MODAL ── -->
+<div class="modal-overlay" id="editRegModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Edit Registration Block</div><div class="modal-subtitle" id="editRegSub">Modify cooldown settings</div></div>
+      <button class="modal-close" onclick="closeModal('editRegModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:12px">
+        <label class="form-label">Deletion Reason</label>
+        <textarea class="form-textarea" id="editRegReason" style="min-height:60px"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cooldown (hours, 0 = remove)</label>
+        <input type="number" class="form-input" id="editRegCooldown" min="0" placeholder="0 = no cooldown"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('editRegModal')">Cancel</button>
+      <button class="btn btn-primary" id="editRegConfirmBtn" onclick="confirmEditReg()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── LEGAL EDITOR MODAL ── -->
+<div class="modal-overlay" id="legalEditorModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div><div class="modal-title">📄 Edit Legal Documents</div><div class="modal-subtitle">Update Terms of Service & Privacy Policy shown to users</div></div>
+      <button class="modal-close" onclick="closeModal('legalEditorModal')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="legalTabTerms" class="type-pill sel-info" onclick="switchLegalTab('terms')">Terms of Service</button>
+        <button id="legalTabPrivacy" class="type-pill" onclick="switchLegalTab('privacy')">Privacy Policy</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Content (HTML supported)</label>
+        <textarea id="legalEditorContent" style="width:100%;background:#0F1020;border:1px solid rgba(255,255,255,0.1);color:#E2E4F0;border-radius:10px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:12px;min-height:320px;resize:vertical;outline:none;line-height:1.6" placeholder="Enter HTML content for this document…"></textarea>
+        <div class="form-hint">This replaces the default content. Leave empty to use default. HTML is supported.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('legalEditorModal')">Cancel</button>
+      <button class="btn btn-primary" id="legalSaveBtn" onclick="saveLegalDoc()">Save Document</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+<script>
+const SID=()=>localStorage.getItem("nsid")||"";
+const api=(p,o={})=>fetch(p,{headers:{"X-Session-Id":SID(),"Content-Type":"application/json",...(o.headers||{})},...o});
+const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmtDate=iso=>{try{return new Date(iso).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "—";}};
+const fmtTime=iso=>{try{return new Date(iso).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit"});}catch{return "";}};
+
+function openSidebar(){document.getElementById("sidebar").classList.add("open");document.getElementById("sOverlay").classList.add("open");}
+function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sOverlay").classList.remove("open");}
+
+// ── Clear Firebase IndexedDB on logout ──────────────────────
+// signOut alone leaves stale OAuth state in IndexedDB → next
+// signInWithPopup silently fails. Clear all 3 DBs on logout.
+
+async function _clearAllFirebaseState() {
+  // ── Step 1: Clear Firebase IDB by OPENING + CLEARING (not deleteDatabase) ──
+  // deleteDatabase() is BLOCKED when Firebase SDK has the DB open,
+  // so it silently "succeeds" without deleting anything. Opening directly
+  // and clearing records works even with open connections.
+  await new Promise(resolve => {
+    try {
+      const req = indexedDB.open("firebaseLocalStorageDb");
+      req.onerror = () => resolve();
+      req.onsuccess = () => {
+        const db = req.result;
+        try {
+          const stores = Array.from(db.objectStoreNames);
+          if (!stores.length) { db.close(); resolve(); return; }
+          const tx = db.transaction(stores, "readwrite");
+          stores.forEach(s => { try { tx.objectStore(s).clear(); } catch(_) {} });
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror   = () => { db.close(); resolve(); };
+        } catch(_) { try { db.close(); } catch(_){} resolve(); }
+      };
+    } catch(_) { resolve(); }
+  });
+
+  // ── Step 2: Delete the other Firebase DBs (no open connections on these) ──
+  await Promise.all([
+    "firebase-heartbeat-database",
+    "firebase-installations-database"
+  ].map(name => new Promise(res => {
+    try { const r = indexedDB.deleteDatabase(name); r.onsuccess = r.onerror = r.onblocked = () => res(); }
+    catch(_) { res(); }
+  })));
+
+  // ── Step 3: Wipe firebase: keys from sessionStorage ──────────────────────
+  try {
+    Object.keys(sessionStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) sessionStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 4: Wipe firebase: keys from localStorage ────────────────────────
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith("firebase:") || k.startsWith("firebaseui:")) localStorage.removeItem(k);
+    });
+  } catch(_) {}
+
+  // ── Step 5: Expire Firebase cookies ──────────────────────────────────────
+  try {
+    const host = window.location.hostname;
+    const domains = [host, "." + host, ""];
+    const paths   = ["/", ""];
+    document.cookie.split(";").forEach(raw => {
+      const name = raw.trim().split("=")[0].trim();
+      if (!name) return;
+      const isFB = name.startsWith("firebase:") || name.startsWith("firebaseui:")
+                || name.startsWith("__Secure-firebase") || name.includes("firebase");
+      if (!isFB) return;
+      domains.forEach(d => paths.forEach(p => {
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;SameSite=None;Secure" +
+          (p ? ";path=" + p : "") + (d ? ";domain=" + d : "");
+      }));
+    });
+  } catch(_) {}
+}
+
+async function doLogout() {
+  try {
+    // Step 1: Firebase signOut (CRITICAL!)
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const app = initializeApp({apiKey:"AIzaSyATmS9Zy8YIxXf1qYpUB6wIw45i7K-3YVU",authDomain:"hosting-website-bot-v9-v1.firebaseapp.com",projectId:"hosting-website-bot-v9-v1"});
+    const auth = getAuth(app);
+    await signOut(auth);
+    
+    // Step 2: Backend session invalidation
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-Session-Id": localStorage.getItem("nsid") || "" }
+    }).catch(() => {});
+
+    // Step 3: Clear ALL Firebase persistent state
+    await _clearAllFirebaseState().catch(() => {});
+
+    // Step 4: Wipe all local state
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Step 5: Navigate with cache-buster
+    window.location.href = "/?" + Date.now();
+  } catch(err) {
+    console.error('Logout error:', err);
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = "/?" + Date.now();
+  }
+}
+function closeModal(id){document.getElementById(id).classList.remove("open");}
+function openModal(id){document.getElementById(id).classList.add("open");}
+
+let currentTab="overview";
+const tabLoaded={};
+function switchTab(name,btn){
+  document.querySelectorAll(".admin-tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("tab-"+name).classList.add("active");
+  currentTab=name;
+  if(!tabLoaded[name]){tabLoaded[name]=true;loadTab(name);}
+}
+function loadTab(name){
+  if(name==="overview"){loadAppeals();loadAdminUpgrades();}
+  else if(name==="users")loadUsers();
+  else if(name==="tickets")loadAdminTickets();
+  else if(name==="activity")loadActivity();
+}
+function refreshCurrentTab(){tabLoaded[currentTab]=false;loadTab(currentTab);if(currentTab==="overview")loadUsers();}
+
+function toast(msg,type="info"){
+  const ICONS={success:`<svg class="toast-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,error:`<svg class="toast-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,info:`<svg class="toast-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/></svg>`,warning:`<svg class="toast-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>`};
+  const c=document.getElementById("toastStack");const el=document.createElement("div");
+  el.className=`toast toast-${type}`;el.innerHTML=`${ICONS[type]||ICONS.info}<span>${esc(msg)}</span>`;
+  c.appendChild(el);setTimeout(()=>{el.classList.add("toast-out");el.addEventListener("animationend",()=>el.remove(),{once:true});},4500);
+}
+
+async function loadUsers(){
+  try{
+    const r=await api("/api/admin/users");const d=await r.json();
+    const empty=document.getElementById("usersEmpty"),tbl=document.getElementById("usersTable"),body=document.getElementById("usersBody");
+    if(!d.success||!d.users||!Object.keys(d.users).length){empty.style.display="flex";tbl.style.display="none";return;}
+    empty.style.display="none";tbl.style.display="table";
+    const users=Object.values(d.users);
+    document.getElementById("sTotalUsers").textContent=users.length;
+    document.getElementById("sBanned").textContent=users.filter(u=>u.banned).length;
+    let tf=0;users.forEach(u=>{tf+=(u.file_count||0);});
+    document.getElementById("sTotalFiles").textContent=tf;
+    body.innerHTML=users.map(u=>`<tr>
+      <td>
+        <div style="font-weight:600;color:var(--text-primary)">${esc(u.name||"—")}</div>
+        <div style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary)">${esc(u.email||"—")}</div>
+        ${u.ban_reason?`<div style="font-size:11px;color:#EF4444;margin-top:2px">Reason: ${esc(u.ban_reason)}</div>`:""}
+      </td>
+      <td><select class="role-select" onchange="changeRole('${u.uid}',this.value)">
+        <option value="free" ${u.role==="free"?"selected":""}>Free</option>
+        <option value="subscribed" ${u.role==="subscribed"?"selected":""}>Subscribed</option>
+        <option value="admin" ${u.role==="admin"?"selected":""}>Admin</option>
+      </select></td>
+      <td style="color:var(--text-secondary)">${u.file_count||0}</td>
+      <td>${u.suspended?'<span class="badge" style="background:rgba(245,158,11,0.15);color:#F59E0B;border:1px solid rgba(245,158,11,0.3)">Suspended</span>':u.banned?'<span class="badge badge-danger">Banned</span>':'<span class="badge badge-success">Active</span>'}</td>
+      <td><div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+        ${u.suspended
+          ?`<button class="btn btn-success btn-sm" onclick="unsuspendUser('${u.uid}')">Unsuspend</button>`
+          :u.banned
+            ?`<button class="btn btn-success btn-sm" onclick="unbanUser('${u.uid}')">Unban</button>`
+            :`<button class="btn btn-secondary btn-sm" style="color:#F59E0B;border-color:rgba(245,158,11,0.4)" onclick="openSuspendModal('${u.uid}','${esc(u.email||u.name||'')}')">Suspend</button>
+              <button class="btn btn-danger btn-sm" onclick="openBanModal('${u.uid}','${esc(u.email||u.name||'')}')">Ban</button>`}
+        <button class="btn btn-sm" onclick="openDeleteAccModal('${u.uid}','${esc(u.email||u.name||'')}')" title="Delete Account" style="background:rgba(239,68,68,0.1);color:#EF4444;border:1px solid rgba(239,68,68,0.3);padding:4px 8px">🗑</button>
+      </div></td>
+    </tr>`).join("");
+  }catch(e){toast("Failed to load users","error");}
+}
+
+async function changeRole(uid,role){
+  try{const r=await api("/api/admin/user/role",{method:"POST",body:JSON.stringify({uid,role})});const d=await r.json();if(d.success)toast("Role updated","success");else toast(d.error||"Failed","error");}catch(e){toast("Error","error");}
+}
+let banTargetUid=null;
+function openBanModal(uid,name){banTargetUid=uid;document.getElementById("banModalSub").textContent="Banning: "+name;document.getElementById("banReason").value="";openModal("banModal");}
+async function confirmBan(){
+  if(!banTargetUid)return;
+  const reason=document.getElementById("banReason").value.trim();
+  if(!reason){toast("Please provide a ban reason","warning");return;}
+  const btn=document.getElementById("banConfirmBtn");btn.disabled=true;
+  try{const r=await api("/api/admin/user/ban",{method:"POST",body:JSON.stringify({uid:banTargetUid,ban:true,reason})});const d=await r.json();if(d.success){toast("User banned","warning");closeModal("banModal");await loadUsers();}else toast(d.error||"Failed","error");}catch(e){toast("Error","error");}
+  finally{btn.disabled=false;banTargetUid=null;}
+}
+async function unbanUser(uid){
+  try{const r=await api("/api/admin/user/ban",{method:"POST",body:JSON.stringify({uid,ban:false})});const d=await r.json();if(d.success){toast("User unbanned","success");await loadUsers();await loadAppeals();}else toast(d.error||"Failed","error");}catch(e){toast("Error","error");}
+}
+
+let selectedNotifType="info";
+function selectNotifType(type,el){
+  selectedNotifType=type;
+  document.querySelectorAll(".type-pill").forEach(p=>p.className="type-pill");
+  el.className="type-pill sel-"+type;
+}
+function clearNotifForm(){document.getElementById("notifTitle").value="";document.getElementById("notifMsg").value="";}
+async function sendNotification(){
+  const title=document.getElementById("notifTitle").value.trim();
+  const msg=document.getElementById("notifMsg").value.trim();
+  if(!title||!msg){toast("Fill notification title and message","warning");return;}
+  const btn=document.getElementById("notifBtn");btn.disabled=true;btn.textContent="Sending…";
+  try{
+    const r=await api("/api/admin/notification",{method:"POST",body:JSON.stringify({title,message:msg,type:selectedNotifType})});
+    const d=await r.json();
+    if(d.success){toast("Notification sent to all users","success");clearNotifForm();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+  finally{btn.disabled=false;btn.innerHTML='<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send to All Users';}
+}
+
+const ACT_ICON={login:"👤",upload:"📤",delete:"🗑",start:"▶",stop:"■",rename:"✏",edit:"📝",pip:"📦",malware:"⚠",ban:"🚫"};
+async function loadActivity(){
+  try{
+    const r=await api("/api/admin/activity");const d=await r.json();
+    const el=document.getElementById("activityList");
+    if(!d.success||!d.activity?.length){el.innerHTML='<div class="empty-state"><div class="empty-subtitle">No activity yet</div></div>';return;}
+    el.innerHTML=`<div style="display:flex;flex-direction:column">${d.activity.slice(0,50).map(a=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--border-subtle)">
+        <div style="width:30px;height:30px;border-radius:8px;background:rgba(91,110,247,0.1);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${ACT_ICON[a.action]||"•"}</div>
+        <div style="flex:1;font-size:13px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.msg||"—")}</div>
+        <div style="font-size:11px;color:var(--text-muted);flex-shrink:0">${fmtDate(a.time)}</div>
+      </div>`).join("")}</div>`;
+  }catch(e){}
+}
+
+let activeAdminTicketId=null;
+async function loadAdminTickets(){
+  try{
+    const r=await api("/api/admin/support/tickets");const d=await r.json();
+    const el=document.getElementById("adminTicketList");
+    const tickets=d.tickets||[];
+    if(!tickets.length){el.innerHTML='<div class="empty-state" style="padding:24px"><div class="empty-title">No tickets</div></div>';return;}
+    el.innerHTML=tickets.slice(0,20).map(t=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border-subtle)">
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="openAdminTicketChat('${t.id}','${esc(t.subject||'Ticket')}','${esc(t.uid||'')}','${t.status||'open'}')">
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.subject||"No subject")}</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:1px">${esc(t.uid||"")} · ${esc(t.category||"general")}</div>
+        </div>
+        <span class="badge badge-${t.status==='open'?'success':'neutral'}" style="font-size:10px;flex-shrink:0">${esc(t.status||"open")}</span>
+        <button class="btn btn-secondary btn-sm" onclick="openAdminTicketChat('${t.id}','${esc(t.subject||'Ticket')}','${esc(t.uid||'')}','${t.status||'open'}')" style="flex-shrink:0">Open</button>
+        ${t.status==='open'?`<button class="btn btn-danger btn-sm" onclick="closeTicket('${t.id}')" style="flex-shrink:0">Close</button>`:""}
+      </div>`).join("");
+  }catch(e){}
+}
+
+async function openAdminTicketChat(id,subject,uid,status){
+  activeAdminTicketId=id;
+  document.getElementById("ticketChatTitle").textContent=subject;
+  document.getElementById("ticketChatSub").textContent="User: "+uid+" · Status: "+status;
+  document.getElementById("adminCloseTicketBtn").style.display=status!=="open"?"none":"inline-flex";
+  try{
+    const r=await api("/api/support/ticket/"+id);const d=await r.json();
+    const msgs=d.messages||[];
+    const c=document.getElementById("adminTicketMessages");
+    if(!msgs.length){c.innerHTML='<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:20px">No messages yet</div>';}
+    else{c.innerHTML=msgs.map(m=>{const u=m.role!=="support"&&m.role!=="admin";return `<div style="display:flex;flex-direction:column;align-items:${u?'flex-end':'flex-start'}"><div class="admin-chat-msg ${u?'user':'support'}">${esc(m.message||m.content||"")}</div><div style="font-size:10px;color:var(--text-muted);margin:2px 4px">${u?"User":"Support"} · ${fmtTime(m.created_at||m.time)}</div></div>`;}).join("");c.scrollTop=c.scrollHeight;}
+  }catch(e){document.getElementById("adminTicketMessages").innerHTML='<div style="color:var(--text-muted);font-size:13px">Could not load messages</div>';}
+  openModal("ticketChatModal");
+}
+async function adminSendReply(){
+  const inp=document.getElementById("adminReplyInput");const msg=inp.value.trim();
+  if(!msg||!activeAdminTicketId)return;inp.value="";
+  try{const r=await api("/api/support/reply",{method:"POST",body:JSON.stringify({ticket_id:activeAdminTicketId,message:msg})});const d=await r.json();if(d.success)await openAdminTicketChat(activeAdminTicketId,document.getElementById("ticketChatTitle").textContent,"","open");else toast(d.error||"Failed","error");}catch(e){toast("Error","error");}
+}
+async function adminCloseActiveTicket(){if(activeAdminTicketId){await closeTicket(activeAdminTicketId);closeModal("ticketChatModal");}}
+async function closeTicket(id){
+  try{const r=await api("/api/admin/support/ticket/close",{method:"POST",body:JSON.stringify({ticket_id:id})});const d=await r.json();if(d.success){toast("Ticket closed","success");loadAdminTickets();}else toast(d.error||"Failed","error");}catch(e){toast("Error","error");}
+}
+
+async function loadAdminUpgrades(){
+  try{
+    const r=await api("/api/admin/upgrade-requests");const d=await r.json();
+    const el=document.getElementById("adminUpgradeList");
+    const reqs=d.requests||[];
+    const pending=reqs.filter(r=>r.status==="pending");
+    const done=reqs.filter(r=>r.status!=="pending");
+    const all=[...pending,...done];
+    if(!all.length){el.innerHTML='<div class="empty-state" style="padding:24px"><div class="empty-title">No upgrade requests</div></div>';return;}
+    el.innerHTML=all.slice(0,20).map(req=>{
+      const isPending=req.status==="pending";
+      const statusColor=req.status==="approved"?"#10B981":req.status==="rejected"?"#EF4444":"#F59E0B";
+      const created=req.created_at?new Date(req.created_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"--";
+      return `<div style="padding:12px 16px;border-bottom:1px solid var(--border-subtle);${!isPending?'opacity:.65':''}">
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary)">${esc(req.user_name||req.user_email||req.user_id)}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${esc(req.user_email||"")} · ${created}</div>
+          </div>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.05);color:${statusColor};border:1px solid ${statusColor}40">${req.status.toUpperCase()}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">
+          <b style="color:var(--text-primary)">${esc(req.current_plan||"free")}</b>
+          <span style="margin:0 6px">→</span>
+          <b style="color:#818CF8">${esc(req.requested_plan||"")}</b>
+          ${req.note?`<div style="font-size:11.5px;color:var(--text-muted);margin-top:3px;font-style:italic">"${esc(req.note)}"</div>`:""}
+        </div>
+        ${isPending?`<div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm" style="background:rgba(16,185,129,.15);color:#10B981;border:1px solid rgba(16,185,129,.3)" onclick="approveUpgrade('${req.id}')">✅ Approve</button>
+          <button class="btn btn-sm" style="background:rgba(239,68,68,.1);color:#EF4444;border:1px solid rgba(239,68,68,.25)" onclick="rejectUpgrade('${req.id}')">❌ Reject</button>
+        </div>`:`<div style="font-size:11.5px;color:var(--text-muted)">Reviewed: ${req.reviewed_at?new Date(req.reviewed_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric"}):"--"}</div>`}
+      </div>`;
+    }).join("");
+  }catch(e){document.getElementById("adminUpgradeList").innerHTML='<div class="empty-state" style="padding:24px"><div class="empty-title">Failed to load</div></div>';}
+}
+
+async function approveUpgrade(reqId){
+  if(!confirm("Approve this upgrade request? This will update the user's plan immediately."))return;
+  try{
+    const r=await api(`/api/admin/upgrade-requests/${reqId}/approve`,{method:"POST"});
+    const d=await r.json();
+    if(d.success){toast("Upgrade approved! User has been notified.","success");loadAdminUpgrades();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+}
+
+async function rejectUpgrade(reqId){
+  const reason=prompt("Rejection reason (optional):");
+  if(reason===null)return; // cancelled
+  try{
+    const r=await api(`/api/admin/upgrade-requests/${reqId}/reject`,{method:"POST",body:JSON.stringify({reason:reason||"Request declined by admin"})});
+    const d=await r.json();
+    if(d.success){toast("Request rejected. User has been notified.","info");loadAdminUpgrades();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+}
+
+async function loadAppeals(){
+  try{
+    const r=await api("/api/admin/unban-appeals");const d=await r.json();
+    const el=document.getElementById("appealsList");
+    const appeals=d.appeals||[];
+    if(!appeals.length){el.innerHTML='<div class="empty-state" style="padding:24px"><div class="empty-subtitle">No unban appeals</div></div>';return;}
+    el.innerHTML=appeals.map(a=>`
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border-subtle)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary)">${esc(a.name||a.email||a.uid)}</div>
+          <div style="font-size:11.5px;font-family:monospace;color:var(--text-secondary)">${esc(a.email||"")}</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;background:var(--bg-elevated);border-radius:6px;padding:7px 10px">${esc(a.appeal||"No reason provided")}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${fmtDate(a.created_at)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
+          <button class="btn btn-success btn-sm" onclick="reviewAppeal('${a.uid}','approve')">Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="reviewAppeal('${a.uid}','reject')">Reject</button>
+        </div>
+      </div>`).join("");
+  }catch(e){}
+}
+async function reviewAppeal(uid,decision){
+  try{const r=await api("/api/admin/unban-appeal/review",{method:"POST",body:JSON.stringify({uid,decision})});const d=await r.json();if(d.success){toast(decision==="approve"?"User unbanned":"Appeal rejected",decision==="approve"?"success":"info");loadAppeals();loadUsers();}else toast(d.error||"Failed","error");}catch(e){toast("Error","error");}
+}
+
+// ─── SUSPEND ───────────────────────────────────────────────
+let suspendTargetUid=null, suspendDurationHours=null;
+function openSuspendModal(uid,name){
+  suspendTargetUid=uid; suspendDurationHours=null;
+  document.getElementById("suspendModalSub").textContent="Suspending: "+name;
+  document.getElementById("suspendReason").value="";
+  document.querySelectorAll("[id^='sdur-']").forEach(b=>b.className="type-pill");
+  document.getElementById("sdur-perm").className="type-pill sel-info";
+  document.getElementById("customDurWrap").style.display="none";
+  document.getElementById("customDurPreview").textContent="";
+  openModal("suspendModal");
+  loadSupportToggle();
+}
+function setSuspendDuration(hours,el){
+  suspendDurationHours=hours;
+  document.querySelectorAll("[id^='sdur-']").forEach(b=>b.className="type-pill");
+  el.className="type-pill sel-info";
+  const cw=document.getElementById("customDurWrap");
+  if(hours==='custom'){
+    cw.style.display="block";
+    updateCustomPreview();
+    ["cdur_months","cdur_days","cdur_hours","cdur_mins"].forEach(id=>{
+      document.getElementById(id).oninput=updateCustomPreview;
+    });
+  } else {
+    cw.style.display="none";
+  }
+}
+function updateCustomPreview(){
+  const mo=parseInt(document.getElementById("cdur_months").value)||0;
+  const dy=parseInt(document.getElementById("cdur_days").value)||0;
+  const hr=parseInt(document.getElementById("cdur_hours").value)||0;
+  const mn=parseInt(document.getElementById("cdur_mins").value)||0;
+  const totalHrs=mo*720+dy*24+hr+mn/60;
+  const parts=[];
+  if(mo)parts.push(mo+" month"+(mo>1?"s":""));
+  if(dy)parts.push(dy+" day"+(dy>1?"s":""));
+  if(hr)parts.push(hr+" hour"+(hr>1?"s":""));
+  if(mn)parts.push(mn+" minute"+(mn>1?"s":""));
+  const prev=document.getElementById("customDurPreview");
+  if(parts.length){prev.textContent="Duration: "+parts.join(", ")+" (~"+totalHrs.toFixed(1)+" hrs)";}
+  else{prev.textContent="Please enter a duration above 0.";}
+}
+function getCustomDurationHours(){
+  const mo=parseInt(document.getElementById("cdur_months").value)||0;
+  const dy=parseInt(document.getElementById("cdur_days").value)||0;
+  const hr=parseInt(document.getElementById("cdur_hours").value)||0;
+  const mn=parseInt(document.getElementById("cdur_mins").value)||0;
+  return mo*720+dy*24+hr+mn/60;
+}
+
+let _supportEnabled=true;
+async function loadSupportToggle(){
+  try{
+    const r=await api("/api/admin/support_status");
+    const d=await r.json();
+    _supportEnabled=d.support_enabled;
+    const st=document.getElementById("supportToggleStatus");
+    const btn=document.getElementById("supportToggleBtn");
+    if(st)st.textContent=_supportEnabled?"✅ Support is ON":"❌ Support is OFF";
+    if(btn){
+      btn.textContent=_supportEnabled?"Disable Support":"Enable Support";
+      btn.style.background=_supportEnabled?"rgba(239,68,68,0.15)":"rgba(34,197,94,0.15)";
+      btn.style.color=_supportEnabled?"#EF4444":"#22C55E";
+      btn.style.border=_supportEnabled?"1px solid rgba(239,68,68,0.3)":"1px solid rgba(34,197,94,0.3)";
+    }
+  }catch(e){}
+}
+async function toggleSupport(){
+  try{
+    const r=await api("/api/admin/support_toggle",{method:"POST",body:JSON.stringify({enabled:!_supportEnabled})});
+    const d=await r.json();
+    if(d.success){toast(_supportEnabled?"Support disabled":"Support enabled",_supportEnabled?"warning":"success");await loadSupportToggle();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+}
+
+async function confirmSuspend(){
+  if(!suspendTargetUid)return;
+  const reason=document.getElementById("suspendReason").value.trim();
+  if(!reason){toast("Please provide a suspension reason","warning");return;}
+  const btn=document.getElementById("suspendConfirmBtn");btn.disabled=true;
+  try{
+    const showOnLogin=document.getElementById("suspendShowLogin")?document.getElementById("suspendShowLogin").checked:false;
+    const body={uid:suspendTargetUid,suspend:true,reason,show_on_login:showOnLogin};
+    if(suspendDurationHours==='custom'){
+      const customHrs=getCustomDurationHours();
+      if(customHrs<=0){toast("Please enter a valid custom duration","warning");btn.disabled=false;return;}
+      body.duration_hours=customHrs;
+    } else if(suspendDurationHours){
+      body.duration_hours=suspendDurationHours;
+    }
+    const r=await api("/api/admin/user/suspend",{method:"POST",body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.success){toast("User suspended","warning");closeModal("suspendModal");await loadUsers();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+  finally{btn.disabled=false;suspendTargetUid=null;}
+}
+async function unsuspendUser(uid){
+  try{const r=await api("/api/admin/user/suspend",{method:"POST",body:JSON.stringify({uid,suspend:false,reason:""})});const d=await r.json();if(d.success){toast("User unsuspended","success");await loadUsers();}else toast(d.error||"Failed","error");}catch(e){toast("Error","error");}
+}
+
+// ─── DELETE ACCOUNT ─────────────────────────────────────────
+let deleteAccTargetUid=null, deleteAccCooldown=0;
+function openDeleteAccModal(uid,name){
+  deleteAccTargetUid=uid; deleteAccCooldown=0;
+  document.getElementById("deleteAccModalSub").textContent="Deleting: "+name;
+  document.getElementById("deleteAccReason").value="";
+  document.querySelectorAll("[id^='cd-']").forEach(b=>b.className="type-pill");
+  document.getElementById("cd-0").className="type-pill sel-info";
+  if(document.getElementById("deleteKeepData"))document.getElementById("deleteKeepData").checked=true;
+  if(document.getElementById("deleteCdCustomWrap"))document.getElementById("deleteCdCustomWrap").style.display="none";
+  openModal("deleteAccModal");
+}
+function setDeleteCooldown(hours,el){
+  deleteAccCooldown=hours;
+  document.querySelectorAll("[id^='cd-']").forEach(b=>b.className="type-pill");
+  el.className="type-pill sel-info";
+  const cw=document.getElementById("deleteCdCustomWrap");
+  if(cw)cw.style.display=(hours==='custom')?'block':'none';
+}
+function getDeleteCooldownHours(){
+  if(deleteAccCooldown==='custom'){
+    const dy=parseInt(document.getElementById("dcd_days").value)||0;
+    const hr=parseInt(document.getElementById("dcd_hours").value)||0;
+    return dy*24+hr;
+  }
+  return deleteAccCooldown;
+}
+async function confirmDeleteAccount(){
+  if(!deleteAccTargetUid)return;
+  const reason=document.getElementById("deleteAccReason").value.trim();
+  if(!reason){toast("Please provide a deletion reason","warning");return;}
+  const keepData=document.getElementById("deleteKeepData")?document.getElementById("deleteKeepData").checked:true;
+  const cdHours=getDeleteCooldownHours();
+  const btn=document.getElementById("deleteAccConfirmBtn");btn.disabled=true;
+  try{
+    const r=await api("/api/admin/user/delete",{method:"POST",body:JSON.stringify({uid:deleteAccTargetUid,reason,cooldown_hours:cdHours,keep_data:keepData})});
+    const d=await r.json();
+    if(d.success){
+      toast("Account deleted"+(d.data_backed_up?" (data backed up)":""),"success");
+      closeModal("deleteAccModal");await loadUsers();
+    } else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+  finally{btn.disabled=false;deleteAccTargetUid=null;}
+}
+
+// ─── RESTORE ACCOUNTS ───────────────────────────────────────
+async function openRestoreAccModal(){
+  openModal("restoreAccModal");
+  const listEl=document.getElementById("restoreAccList");
+  listEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-secondary)">Loading…</div>';
+  try{
+    const r=await api("/api/admin/deleted-account-backups");const d=await r.json();
+    if(!d.success){listEl.innerHTML='<div style="padding:20px;color:#EF4444">Failed to load</div>';return;}
+    const items=d.backups||[];
+    if(!items.length){listEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-secondary)">No deleted account backups found.</div>';return;}
+    listEl.innerHTML=items.map(a=>`
+      <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:12px;padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div>
+            <div style="font-weight:700;color:var(--text-primary)">${esc(a.name||"Unknown")} <span style="font-size:11px;color:var(--text-muted)">${esc(a.email||"")}</span></div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:3px">Role: ${esc(a.role||"free")} · Files: ${a.files_count||0} · Deleted: ${a.deleted_at?new Date(a.deleted_at).toLocaleDateString():"-"}</div>
+            <div style="font-size:12px;color:#EF4444;margin-top:2px">Reason: ${esc(a.reason||"—")}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-success btn-sm" onclick="restoreAccount('${esc(a.uid||"")}')">♻️ Restore</button>
+            <button class="btn btn-secondary btn-sm" onclick="openEditReg('${esc(a.uid||"")}','${esc(a.name||"")}','${esc(a.reason||"")}')">✏️ Edit</button>
+            <button class="btn btn-secondary btn-sm" onclick="removeCooldown('${esc(a.uid||"")}')">🔓 Remove Cooldown</button>
+          </div>
+        </div>
+      </div>
+    `).join("");
+  }catch(e){listEl.innerHTML='<div style="padding:20px;color:#EF4444">Error loading backups</div>';}
+}
+async function restoreAccount(uid){
+  if(!confirm("Restore this account? This will re-create the user in the system."))return;
+  try{
+    const r=await api("/api/admin/deleted-account/restore",{method:"POST",body:JSON.stringify({uid})});
+    const d=await r.json();
+    if(d.success){toast(d.message||"Account restored","success");openRestoreAccModal();await loadUsers();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+}
+async function removeCooldown(uid){
+  try{
+    const r=await api("/api/admin/deleted-account/remove-cooldown",{method:"POST",body:JSON.stringify({uid})});
+    const d=await r.json();
+    if(d.success){toast("Cooldown removed","success");openRestoreAccModal();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+}
+let _editRegUid=null;
+function openEditReg(uid,name,reason){
+  _editRegUid=uid;
+  document.getElementById("editRegSub").textContent="Editing: "+name;
+  document.getElementById("editRegReason").value=reason||"";
+  document.getElementById("editRegCooldown").value="0";
+  openModal("editRegModal");
+}
+async function confirmEditReg(){
+  if(!_editRegUid)return;
+  const reason=document.getElementById("editRegReason").value.trim();
+  const cooldown=parseInt(document.getElementById("editRegCooldown").value)||0;
+  const btn=document.getElementById("editRegConfirmBtn");btn.disabled=true;
+  try{
+    const r=await api("/api/admin/deleted-account/edit-registration",{method:"POST",body:JSON.stringify({uid:_editRegUid,reason,cooldown_hours:cooldown})});
+    const d=await r.json();
+    if(d.success){toast("Updated","success");closeModal("editRegModal");openRestoreAccModal();}
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+  finally{btn.disabled=false;_editRegUid=null;}
+}
+
+// ─── LEGAL EDITOR ───────────────────────────────────────────
+let _legalActiveTab="terms";
+async function openLegalEditor(){
+  openModal("legalEditorModal");
+  _legalActiveTab="terms";
+  document.getElementById("legalTabTerms").className="type-pill sel-info";
+  document.getElementById("legalTabPrivacy").className="type-pill";
+  await loadLegalContent("terms");
+}
+async function switchLegalTab(tab){
+  _legalActiveTab=tab;
+  document.getElementById("legalTabTerms").className="type-pill"+(tab==="terms"?" sel-info":"");
+  document.getElementById("legalTabPrivacy").className="type-pill"+(tab==="privacy"?" sel-info":"");
+  await loadLegalContent(tab);
+}
+async function loadLegalContent(tab){
+  const ta=document.getElementById("legalEditorContent");
+  ta.value="Loading…";ta.disabled=true;
+  try{
+    const r=await api("/api/admin/legal/get");const d=await r.json();
+    ta.value=(tab==="terms"?d.terms:d.privacy)||"";
+    ta.disabled=false;
+  }catch(e){ta.value="Error loading content";ta.disabled=false;}
+}
+async function saveLegalDoc(){
+  const content=document.getElementById("legalEditorContent").value;
+  const btn=document.getElementById("legalSaveBtn");btn.disabled=true;
+  try{
+    const r=await api("/api/admin/legal/update",{method:"POST",body:JSON.stringify({type:_legalActiveTab,content})});
+    const d=await r.json();
+    if(d.success)toast(d.message||"Saved","success");
+    else toast(d.error||"Failed","error");
+  }catch(e){toast("Error","error");}
+  finally{btn.disabled=false;}
+}
+
+async function init(){
+  if(!SID()){window.location.href="/";return;}
+  try{
+    const r=await api("/api/auth/me");if(!r.ok){window.location.href="/";return;}
+    const d=await r.json();const u=d.user;
+    if(!["admin","owner"].includes(u.role)){window.location.href="/dashboard";return;}
+    document.getElementById("sName").textContent=u.name||u.email;
+    document.getElementById("sRole").textContent=u.role;
+    document.getElementById("sAvatar").textContent=(u.name||u.email||"?")[0].toUpperCase();
+  }catch(e){window.location.href="/";}
+  loadUsers();loadAppeals();loadAdminUpgrades();
+  tabLoaded["overview"]=true;
+}
+init();
+</script>
+</body>
+</html>
