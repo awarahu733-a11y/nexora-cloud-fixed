@@ -59,6 +59,7 @@
 .qe-edit-btn:hover{background:var(--primary-soft);border-color:var(--primary-border);color:var(--primary);}
 
 </style>
+<base target="_blank">
 </head>
 <script>
 (function(){
@@ -210,20 +211,21 @@
 const SID=()=>localStorage.getItem("nsid")||"";
 const api=(p,o={})=>fetch(p,{headers:{"X-Session-Id":SID(),"Content-Type":"application/json",...(o.headers||{})},...o});
 const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-const fmtDate=iso=>{try{return new Date(iso).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "—";}};
+const fmtDate=iso=>{try{return new Date(iso).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "—";};
 const AVC=["#5B6EF7","#8B5CF6","#EC4899","#F59E0B","#10B981","#38BDF8","#EF4444","#6366F1","#14B8A6","#F97316"];
 const avc=n=>AVC[(n||"?").charCodeAt(0)%AVC.length];
 function setAvatar(l,c){document.querySelectorAll(".sidebar-avatar,.topbar-avatar").forEach(el=>{el.textContent=l;el.style.background=c;});}
 function openSidebar(){document.getElementById("sidebar").classList.add("open");document.getElementById("sOverlay").classList.add("open");document.body.style.overflow="hidden";}
 function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sOverlay").classList.remove("open");document.body.style.overflow="";}
 
+// ═══════════════════════════════════════════════════════════════════
+// FIXED LOGOUT FUNCTION - Proper Firebase signOut + Cookie Delete
+// ═══════════════════════════════════════════════════════════════════
 async function doLogout() {
   try {
-    // Step 1: Firebase signOut (CRITICAL!)
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    // Step 1: Firebase signOut (getAuth without app = default app)
     const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
-    const app = initializeApp({apiKey:"AIzaSyATmS9Zy8YIxXf1qYpUB6wIw45i7K-3YVU",authDomain:"hosting-website-bot-v9-v1.firebaseapp.com",projectId:"hosting-website-bot-v9-v1"});
-    const auth = getAuth(app);
+    const auth = getAuth(); // ← NO app parameter = uses default initialized app
     await signOut(auth);
     
     // Step 2: Backend session invalidation
@@ -236,7 +238,14 @@ async function doLogout() {
     localStorage.clear();
     sessionStorage.clear();
     
-    // Step 4: Clear Firebase IndexedDB
+    // Step 4: Delete cookies (nsid + any others)
+    document.cookie.split(";").forEach(function(c) {
+      const [name] = c.trim().split("=");
+      document.cookie = name + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = name + "=; path=/; domain=" + window.location.hostname + "; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    });
+    
+    // Step 5: Clear Firebase IndexedDB
     try {
       const dbs = await indexedDB.databases();
       dbs.forEach(db => {
@@ -246,23 +255,30 @@ async function doLogout() {
       });
     } catch(e) {}
     
-    // Step 5: Redirect
+    // Step 6: Redirect
     window.location.replace("/");
   } catch(err) {
     console.error('Logout error:', err);
+    // Force logout even if Firebase fails
     localStorage.clear();
     sessionStorage.clear();
+    // Delete cookies even on error
+    document.cookie.split(";").forEach(function(c) {
+      const [name] = c.trim().split("=");
+      document.cookie = name + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    });
     window.location.replace("/");
   }
 }
+
 function setGreeting(name){const h=new Date().getHours();const g=h<12?"Good morning":h<17?"Good afternoon":"Good evening";document.getElementById("greetingText").innerHTML=`${g}, <span class="greeting-name">${esc(name.split(" ")[0])}</span> 👋`;}
 const ACT_ICONS={login:`<svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`,upload:`<svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>`,delete:`<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,start:`<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,stop:`<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,rename:`<svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`,edit:`<svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`};
 const ACT_BG={login:"rgba(91,110,247,0.12)",upload:"rgba(56,189,248,0.12)",delete:"rgba(239,68,68,0.12)",start:"rgba(34,197,94,0.12)",stop:"rgba(245,158,11,0.12)",rename:"rgba(167,139,250,0.12)",edit:"rgba(91,110,247,0.12)"};
 const ACT_C={login:"#818CF8",upload:"#38BDF8",delete:"#EF4444",start:"#22C55E",stop:"#F59E0B",rename:"#A78BFA",edit:"#818CF8"};
 async function loadActivityPreview(){
-  try{const r=await api("/api/activity");const d=await r.json();
-  if(!d.success||!d.activity?.length)return;
-  document.getElementById("activityPreview").innerHTML=d.activity.slice(0,3).map(a=>`<div class="act-row"><div class="act-ico" style="background:${ACT_BG[a.action]||ACT_BG.edit};color:${ACT_C[a.action]||ACT_C.edit}">${ACT_ICONS[a.action]||ACT_ICONS.edit}</div><div class="act-msg">${esc(a.msg||"Unknown action")}</div><div class="act-time">${fmtDate(a.time)}</div></div>`).join("");}catch(e){}}
+try{const r=await api("/api/activity");const d=await r.json();
+if(!d.success||!d.activity?.length)return;
+document.getElementById("activityPreview").innerHTML=d.activity.slice(0,3).map(a=>`<div class="act-row"><div class="act-ico" style="background:${ACT_BG[a.action]||ACT_BG.edit};color:${ACT_C[a.action]||ACT_C.edit}">${ACT_ICONS[a.action]||ACT_ICONS.edit}</div><div class="act-msg">${esc(a.msg||"Unknown action")}</div><div class="act-time">${fmtDate(a.time)}</div></div>`).join("");}catch(e){}}
 // ── bfcache guard ─────────────────────────────────────────────────────────────
 // If Chrome restores this page from bfcache after logout, re-validate session.
 // If session is gone, redirect to login immediately instead of showing stale UI.
