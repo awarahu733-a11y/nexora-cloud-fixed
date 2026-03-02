@@ -58,8 +58,40 @@
 .qe-edit-btn{padding:5px 10px;font-size:11.5px;font-weight:700;border-radius:7px;border:1px solid var(--border-default);background:var(--bg-elevated);color:var(--text-secondary);cursor:pointer;font-family:inherit;transition:all .15s;flex-shrink:0;}
 .qe-edit-btn:hover{background:var(--primary-soft);border-color:var(--primary-border);color:var(--primary);}
 
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE SIDEBAR FIX - Added missing styles
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 860px) {
+  .sidebar {
+    position: fixed;
+    left: -280px;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    z-index: 1000;
+    transition: left 0.3s ease;
+  }
+  .sidebar.open {
+    left: 0;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  }
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  .sidebar-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
+}
 </style>
-<base target="_blank">
+<!-- REMOVED: <base target="_blank"> - This was causing all links to open in new tab -->
 </head>
 <script>
 (function(){
@@ -211,7 +243,7 @@
 const SID=()=>localStorage.getItem("nsid")||"";
 const api=(p,o={})=>fetch(p,{headers:{"X-Session-Id":SID(),"Content-Type":"application/json",...(o.headers||{})},...o});
 const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-const fmtDate=iso=>{try{return new Date(iso).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "—";};
+const fmtDate=iso=>{try{return new Date(iso).toLocaleString("en-IN",{timeZone:"Asia/Kolkata",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "—";}};
 const AVC=["#5B6EF7","#8B5CF6","#EC4899","#F59E0B","#10B981","#38BDF8","#EF4444","#6366F1","#14B8A6","#F97316"];
 const avc=n=>AVC[(n||"?").charCodeAt(0)%AVC.length];
 function setAvatar(l,c){document.querySelectorAll(".sidebar-avatar,.topbar-avatar").forEach(el=>{el.textContent=l;el.style.background=c;});}
@@ -219,54 +251,75 @@ function openSidebar(){document.getElementById("sidebar").classList.add("open");
 function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sOverlay").classList.remove("open");document.body.style.overflow="";}
 
 // ═══════════════════════════════════════════════════════════════════
-// FIXED LOGOUT FUNCTION - Proper Firebase signOut + Cookie Delete
+// FIXED LOGOUT FUNCTION - Ultra aggressive cleanup
 // ═══════════════════════════════════════════════════════════════════
 async function doLogout() {
   try {
-    // Step 1: Firebase signOut (getAuth without app = default app)
-    const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
-    const auth = getAuth(); // ← NO app parameter = uses default initialized app
-    await signOut(auth);
+    // Step 1: Try Firebase signOut if available
+    try {
+      const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+      const auth = getAuth();
+      await signOut(auth);
+    } catch(fbErr) {
+      console.log("Firebase signOut skipped:", fbErr.message);
+    }
     
     // Step 2: Backend session invalidation
-    await fetch("/api/auth/logout", {
-      method: "POST",
-      headers: {"X-Session-Id": localStorage.getItem("nsid") || ""}
-    }).catch(() => {});
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {"X-Session-Id": localStorage.getItem("nsid") || ""}
+      });
+    } catch(e) {}
     
-    // Step 3: Clear all local data
+    // Step 3: Clear ALL storage
     localStorage.clear();
     sessionStorage.clear();
     
-    // Step 4: Delete cookies (nsid + any others)
-    document.cookie.split(";").forEach(function(c) {
-      const [name] = c.trim().split("=");
-      document.cookie = name + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      document.cookie = name + "=; path=/; domain=" + window.location.hostname + "; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    });
+    // Step 4: Delete ALL cookies including HttpOnly (via backend) and client-side
+    const deleteAllCookies = () => {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i];
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+        
+        // Delete with all possible path/domain combinations
+        document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+        document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=" + window.location.hostname;
+        document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=." + window.location.hostname;
+        document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=" + window.location.pathname;
+        document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure";
+      }
+    };
+    deleteAllCookies();
     
-    // Step 5: Clear Firebase IndexedDB
+    // Step 5: Clear IndexedDB (Firebase stores auth here)
     try {
-      const dbs = await indexedDB.databases();
-      dbs.forEach(db => {
-        if (db.name && db.name.startsWith('firebase')) {
+      const databases = await indexedDB.databases();
+      databases.forEach(db => {
+        if (db.name) {
           indexedDB.deleteDatabase(db.name);
         }
       });
     } catch(e) {}
     
-    // Step 6: Redirect
+    // Step 6: Clear caches
+    if ('caches' in window) {
+      try {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      } catch(e) {}
+    }
+    
+    // Step 7: Hard redirect (replace to prevent back button)
     window.location.replace("/");
+    
   } catch(err) {
     console.error('Logout error:', err);
-    // Force logout even if Firebase fails
+    // Emergency fallback - force clear everything
     localStorage.clear();
     sessionStorage.clear();
-    // Delete cookies even on error
-    document.cookie.split(";").forEach(function(c) {
-      const [name] = c.trim().split("=");
-      document.cookie = name + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    });
     window.location.replace("/");
   }
 }
@@ -280,43 +333,107 @@ try{const r=await api("/api/activity");const d=await r.json();
 if(!d.success||!d.activity?.length)return;
 document.getElementById("activityPreview").innerHTML=d.activity.slice(0,3).map(a=>`<div class="act-row"><div class="act-ico" style="background:${ACT_BG[a.action]||ACT_BG.edit};color:${ACT_C[a.action]||ACT_C.edit}">${ACT_ICONS[a.action]||ACT_ICONS.edit}</div><div class="act-msg">${esc(a.msg||"Unknown action")}</div><div class="act-time">${fmtDate(a.time)}</div></div>`).join("");}catch(e){}}
 // ── bfcache guard ─────────────────────────────────────────────────────────────
-// If Chrome restores this page from bfcache after logout, re-validate session.
-// If session is gone, redirect to login immediately instead of showing stale UI.
 window.addEventListener("pageshow", (e) => {
   if (e.persisted) {
     if (!localStorage.getItem("nsid")) {
       window.location.replace("/");
     } else {
-      init(); // re-validate with server
+      init();
     }
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// FIXED INIT - Better error handling and avatar setting
+// ═══════════════════════════════════════════════════════════════════
 async function init(){
   if(!SID()){window.location.href="/";return;}
-  try{const r=await api("/api/auth/me");
-  if(!r.ok){
-    // Check if suspended or banned
-    try{
-      const d=await r.json();
-      if(d.user&&d.user.suspended){showSuspendOverlay(d.user.suspend_reason,d.user.suspend_until);return;}
-      if(d.user&&d.user.banned){showBannedOverlay(d.user.ban_reason);return;}
-    }catch(e2){}
-    window.location.href="/";return;
+  
+  try {
+    const r = await api("/api/auth/me");
+    const d = await r.json();
+    
+    if (!d.success || !d.user) {
+      throw new Error("Auth failed");
+    }
+    
+    const u = d.user;
+    
+    // Check suspension/ban
+    if(u.suspended){showSuspendOverlay(u.suspend_reason,u.suspend_until);return;}
+    if(u.banned){showBannedOverlay(u.ban_reason);return;}
+    
+    // Set user data with fallback
+    const name = u.name || u.email || "User";
+    const firstName = name.split(" ")[0];
+    const letter = firstName[0]?.toUpperCase() || "?";
+    const color = avc(name);
+    
+    // Update DOM elements with checks
+    const sName = document.getElementById("sName");
+    const sRole = document.getElementById("sRole");
+    
+    if(sName) sName.textContent = name;
+    if(sRole) sRole.textContent = u.role || "User";
+    
+    setGreeting(name);
+    setAvatar(letter, color);
+    
+    // Show admin nav if applicable
+    if(["admin","owner"].includes(u.role)){
+      const adminNav = document.getElementById("adminNavItem");
+      if(adminNav) adminNav.style.display = "block";
+    }
+    
+    // Load stats
+    loadStats();
+    loadQuickEdit();
+    loadActivityPreview();
+    loadNotifications();
+    
+  } catch(e) {
+    console.error("Init error:", e);
+    // Don't redirect immediately on error, show "?" avatar instead
+    setAvatar("?", "#5B6EF7");
+    // Only redirect if definitely not authenticated
+    if (!SID()) {
+      window.location.href = "/";
+    }
   }
-  const d=await r.json();const u=d.user;
-  // Check suspension/ban after login
-  if(u.suspended){showSuspendOverlay(u.suspend_reason,u.suspend_until);return;}
-  if(u.banned){showBannedOverlay(u.ban_reason);return;}
-  const name=u.name||u.email||"User";
-  document.getElementById("sName").textContent=name;document.getElementById("sRole").textContent=u.role;
-  setGreeting(name);const letter=name[0].toUpperCase();const color=avc(name);setAvatar(letter,color);
-  if(["admin","owner"].includes(u.role))document.getElementById("adminNavItem").style.display="block";
-  const fr=await api("/api/files/list");
-  if(fr.ok){const fd=await fr.json();const files=fd.files||[];const run=files.filter(f=>f.status==="active").length;document.getElementById("sTotalFiles").textContent=files.length;document.getElementById("sFileLimit").textContent=`Limit: ${fd.limit}`;document.getElementById("sRunning").textContent=run;document.getElementById("sStopped").textContent=files.length-run;}
-  const sr=await api("/api/subusers/list").catch(()=>null);
-  document.getElementById("sSubUsers").textContent=sr?.ok?(await sr.json()).users?.length||0:0;
-  }catch(e){window.location.href="/";}
-  loadQuickEdit();loadActivityPreview();loadNotifications();
+}
+
+async function loadStats() {
+  try {
+    const fr = await api("/api/files/list");
+    if(fr.ok) {
+      const fd = await fr.json();
+      const files = fd.files || [];
+      const run = files.filter(f => f.status === "active").length;
+      
+      const sTotal = document.getElementById("sTotalFiles");
+      const sLimit = document.getElementById("sFileLimit");
+      const sRunning = document.getElementById("sRunning");
+      const sStopped = document.getElementById("sStopped");
+      
+      if(sTotal) sTotal.textContent = files.length;
+      if(sLimit) sLimit.textContent = `Limit: ${fd.limit || "—"}`;
+      if(sRunning) sRunning.textContent = run;
+      if(sStopped) sStopped.textContent = files.length - run;
+    }
+    
+    const sr = await api("/api/subusers/list").catch(() => null);
+    const sSub = document.getElementById("sSubUsers");
+    if(sSub) {
+      if(sr?.ok) {
+        const sd = await sr.json();
+        sSub.textContent = sd.users?.length || 0;
+      } else {
+        sSub.textContent = "0";
+      }
+    }
+  } catch(e) {
+    console.error("Stats load error:", e);
+  }
 }
 
 const EXT_CLR={py:"rgba(56,189,248,.14)",js:"rgba(251,191,36,.12)",ts:"rgba(251,191,36,.12)",sh:"rgba(167,139,250,.12)"};
