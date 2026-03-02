@@ -320,6 +320,7 @@ body{display:flex;min-height:100vh;}
 </style>
 <base target="_blank">
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <div class="split">
@@ -399,11 +400,11 @@ const app = initializeApp({apiKey:"AIzaSyATmS9Zy8YIxXf1qYpUB6wIw45i7K-3YVU",auth
 const auth = getAuth(app);
 
 // ══════════════════════════════════════════════════════════════════
-// PROPER LOGOUT FUNCTION WITH FIREBASE SIGNOUT
+// FIXED LOGOUT FUNCTION - Proper Firebase signOut + Cookie Delete
 // ══════════════════════════════════════════════════════════════════
 window.doLogout = async function() {
   try {
-    // Step 1: Firebase signOut (CRITICAL - clears Firebase auth state)
+    // Step 1: Firebase signOut (use getAuth without app = default app)
     await signOut(auth);
     
     // Step 2: Backend session invalidation
@@ -416,7 +417,14 @@ window.doLogout = async function() {
     localStorage.clear();
     sessionStorage.clear();
     
-    // Step 4: Clear Firebase IndexedDB (prevents stale OAuth state)
+    // Step 4: Delete ALL cookies
+    document.cookie.split(";").forEach(function(c) {
+      const [name] = c.trim().split("=");
+      document.cookie = name + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = name + "=; path=/; domain=" + window.location.hostname + "; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    });
+    
+    // Step 5: Clear Firebase IndexedDB
     try {
       const dbs = await indexedDB.databases();
       dbs.forEach(db => {
@@ -426,16 +434,22 @@ window.doLogout = async function() {
       });
     } catch(e) { console.log('IndexedDB clear failed:', e); }
     
-    // Step 5: Redirect to login
+    // Step 6: Redirect to login
     window.location.replace("/");
   } catch(err) {
     console.error('Logout error:', err);
     // Even if Firebase signOut fails, clear everything and redirect
     localStorage.clear();
     sessionStorage.clear();
+    // Delete cookies even on error
+    document.cookie.split(";").forEach(function(c) {
+      const [name] = c.trim().split("=");
+      document.cookie = name + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    });
     window.location.replace("/");
   }
 };
+
 const _card = document.querySelector('.login-card');
 if(localStorage.getItem("nsid")){
   if(_card) _card.style.opacity="0";
@@ -446,6 +460,10 @@ if(localStorage.getItem("nsid")){
       localStorage.removeItem("nsid");localStorage.removeItem("nx_user");
     }).catch(()=>{if(_card){_card.style.transition="opacity .4s";_card.style.opacity="1";}});
 } else {if(_card){_card.style.transition="opacity .4s";setTimeout(()=>{_card.style.opacity="1";},20);}}
+
+// ══════════════════════════════════════════════════════════════════
+// GOOGLE AUTH WITH COOKIE CREATION
+// ══════════════════════════════════════════════════════════════════
 window.doGoogleAuth = async () => {
   const btn=document.getElementById("gBtn");const err=document.getElementById("errBox");
   btn.classList.add("loading");btn.disabled=true;err.classList.remove("show");
@@ -464,8 +482,19 @@ window.doGoogleAuth = async () => {
     const r=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id_token:tok})});
     let d;try{d=await r.json();}catch(_){throw new Error("Server error ("+r.status+"). Try again.");}
     if(d.success){
+      // Store session in localStorage
       localStorage.setItem("nsid",d.session_id);
       localStorage.setItem("nx_user",JSON.stringify(d.user));
+      
+      // ═══════════════════════════════════════════════════════════════
+      // CREATE COOKIE for session (backend can read it)
+      // ═══════════════════════════════════════════════════════════════
+      const cookieExpiry = new Date();
+      cookieExpiry.setDate(cookieExpiry.getDate() + 30); // 30 days
+      document.cookie = `nsid=${d.session_id}; path=/; expires=${cookieExpiry.toUTCString()}; SameSite=Lax`;
+      // For HTTPS production, add Secure flag:
+      // document.cookie = `nsid=${d.session_id}; path=/; expires=${cookieExpiry.toUTCString()}; SameSite=Lax; Secure`;
+      
       const nx=new URLSearchParams(location.search).get("next");
       window.location.href=nx||"/dashboard";
     } else if(d.suspended){
@@ -513,7 +542,7 @@ function showErr(m){const e=document.getElementById("errBox");e.textContent=m;e.
     </div>
     <div id="ls_untilBox" style="font-size:13px;color:#8891B8;margin-bottom:24px"></div>
     <div id="ls_supportBtns" style="margin-bottom:14px"></div>
-    <button onclick="document.getElementById('loginSuspendScreen').style.display='none'" 
+    <button onclick="doLogout()" 
       style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#8891B8;padding:12px 24px;border-radius:12px;font-family:inherit;cursor:pointer;font-size:14px;width:100%;transition:all 0.2s ease">Back to Login</button>
   </div>
 </div>
